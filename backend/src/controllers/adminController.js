@@ -184,6 +184,7 @@ export const getFullLeaveReport = async (req, res) => {
                 lr.reason,
                 lr.status,
                 lr.head_remarks,
+                lr.duration,
                 lr.created_at AS submitted_at
             FROM leave_requests lr
             JOIN users u ON lr.user_id = u.user_id
