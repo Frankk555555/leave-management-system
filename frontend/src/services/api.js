@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api', // URL ของ Backend
+    // ถ้ามีค่าใน Env (บน Vercel) ให้ใช้ค่านั้น ถ้าไม่มี (ในเครื่องเรา) ให้ใช้ localhost
+    baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
 });
 
 // Interceptor เพื่อแนบ Token ไปกับทุก Request
