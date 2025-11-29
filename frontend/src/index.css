@@ -1,0 +1,14 @@
+/* frontend/src/index.css */
+
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- VVVV เพิ่มส่วนนี้ VVVV --- */
+@layer base {
+  body {
+    @apply font-sans; /* สั่งให้ <body> ใช้ฟอนต์ 'sans' (ที่เราเพิ่งตั้งค่า) */
+  }
+}
