@@ -3,6 +3,14 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// --- เพิ่มส่วนนี้เพื่อเช็กค่าที่ Backend อ่านได้ ---
+console.log("🔍 Checking DB Config...");
+console.log("DB_HOST:", process.env.DB_HOST); // ดูว่า Host ถูกไหม
+console.log("DB_PORT:", process.env.DB_PORT); // ดูว่า Port เป็นเลขอะไร (ต้องไม่ใช่ 3306)
+console.log("DB_USER:", process.env.DB_USER);
+console.log("DB_NAME:", process.env.DB_NAME);
+// ------------------------------------------
+
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -12,14 +20,12 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    // --- เพิ่มส่วนนี้สำหรับ Aiven/Cloud Database ---
     ssl: {
-        rejectUnauthorized: false // อนุญาตให้เชื่อมต่อแบบ SSL (จำเป็นสำหรับ Aiven)
+        rejectUnauthorized: false
     }
-    // ------------------------------------------
 });
 
-// Test Connection (เช็กดูว่าต่อติดไหม)
+// ... (ส่วน Test Connection ด้านล่างเหมือนเดิม)
 pool.getConnection()
     .then(connection => {
         console.log('✅ Database connected successfully');
