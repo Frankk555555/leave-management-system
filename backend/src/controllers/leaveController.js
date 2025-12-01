@@ -5,13 +5,21 @@ import path from 'path';
 // เปลี่ยนไปใช้ Telegram Notify Helper
 import { sendTelegramNotify } from '../utils/telegramNotifyHelper.js';
 import { getLeaveBalance, calculateLeaveDays, getAllLeaveBalances } from '../utils/leaveHelper.js';
+import fs from 'fs';
 
 // --- VVVV Multer Config (File Validation) VVVV ---
 
 // 1. Define storage
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/');
+        const dir = 'uploads/';
+        
+        // เช็กว่ามีโฟลเดอร์ไหม? ถ้าไม่มีให้สร้างใหม่
+        if (!fs.existsSync(dir)){
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        
+        cb(null, dir);
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
