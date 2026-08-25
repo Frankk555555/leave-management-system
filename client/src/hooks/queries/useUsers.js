@@ -48,8 +48,9 @@ export const useCreateUser = () => {
 export const useUpdateUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data }) => {
-      const response = await usersAPI.update(id, data);
+    mutationFn: async ({ id, data, ...rest }) => {
+      const payload = data !== undefined ? data : rest;
+      const response = await usersAPI.update(id, payload);
       return response.data;
     },
     onSuccess: (data, variables) => {

@@ -121,7 +121,7 @@ const LeaveManagement = () => {
     userConfirmedRequests.forEach((r) => {
       const code = getLeaveTypeCode(r.leaveType);
       if (leaveStats[code]) {
-        leaveStats[code].used += r.totalDays || 0;
+        leaveStats[code].used += parseFloat(r.totalDays) || 0;
       }
     });
 

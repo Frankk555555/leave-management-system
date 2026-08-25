@@ -51,9 +51,11 @@ const mapUserBalances = (u) => {
     if (code in map) {
       map[code] = Math.max(
         0,
-        (b.totalDays || 0) + (b.carriedOverDays || 0) - (b.usedDays || 0)
+        (parseFloat(b.totalDays) || 0) +
+          (parseFloat(b.carriedOverDays) || 0) -
+          (parseFloat(b.usedDays) || 0)
       );
-      totalMap[code] = b.totalDays || 0;
+      totalMap[code] = parseFloat(b.totalDays) || 0;
     }
   });
 

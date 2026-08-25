@@ -326,9 +326,9 @@ const fillSickPersonalMaternityForm = async (
 
   // สถิติการลา (ในตาราง)
   // จากภาพ: ป่วย y≈492, กิจส่วนตัว y≈542
-  const getUsed = (type) => leaveData.leaveStats?.[type]?.used || 0;
+  const getUsed = (type) => parseFloat(leaveData.leaveStats?.[type]?.used) || 0;
   const getCurrent = (type) =>
-    type === leaveData.leaveType ? leaveData.totalDays : 0;
+    type === leaveData.leaveType ? (parseFloat(leaveData.totalDays) || 0) : 0;
 
   const formatStat = (val) => {
     if (val === undefined || val === null || Number.isNaN(Number(val)))
@@ -549,8 +549,8 @@ const fillVacationForm = async (page, font, leaveData, userData, signatureInfo) 
   // === สถิติการลาพักผ่อน (ในตาราง) ===
   // คอลัมน์: ลามาแล้ว, ลาครั้งนี้, รวมเป็น, คงเหลือสะสม
   const smallFont = 12;
-  const used = vacationStats.used || 0;
-  const currentLeave = leaveData.totalDays || 0;
+  const used = parseFloat(vacationStats.used) || 0;
+  const currentLeave = parseFloat(leaveData.totalDays) || 0;
   const totalUsed = used + currentLeave;
   const remaining = totalAvailable - totalUsed;
 
@@ -687,8 +687,8 @@ const fillPaternityForm = async (page, font, leaveData, userData, signatureInfo)
   // คอลัมน์: ลามาแล้ว, ลาครั้งนี้, รวมเป็น
   const smallFont = 14;
   const paternityStats = leaveData.leaveStats?.paternity || {};
-  const used = paternityStats.used || 0;
-  const currentLeave = leaveData.totalDays || 0;
+  const used = parseFloat(paternityStats.used) || 0;
+  const currentLeave = parseFloat(leaveData.totalDays) || 0;
   const totalUsed = used + currentLeave;
 
   // พิกัดคอลัมน์ (ปรับตามตำแหน่งจริงในตาราง - ดูจากภาพ y≈492-542)
