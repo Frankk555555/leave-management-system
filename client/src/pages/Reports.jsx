@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -17,8 +17,6 @@ import {
   FaChartBar,
   FaFileExcel,
   FaFilePdf,
-  FaSyncAlt,
-  FaFileAlt,
   FaCalendarAlt,
   FaUsers,
   FaCheckCircle,
@@ -29,6 +27,14 @@ import {
   FaFilter,
   FaInfoCircle,
   FaSpinner,
+  FaSearch,
+  FaTimes,
+  FaCalendarDay,
+  FaClock,
+  FaPercentage,
+  FaLayerGroup,
+  FaArrowRight,
+  FaTrophy,
 } from "react-icons/fa";
 import SEO, { SEOConfig } from "../components/common/SEO";
 import "./Reports.css";
@@ -53,7 +59,7 @@ const Reports = () => {
   const [exportingType, setExportingType] = useState(null);
   const [resetting, setResetting] = useState(false);
 
-  // New states for filters
+  // Filter states
   const [usersList, setUsersList] = useState([]);
   const [facultiesList, setFacultiesList] = useState([]);
   const [departmentsList, setDepartmentsList] = useState([]);
@@ -187,7 +193,7 @@ const Reports = () => {
   const handleFacultyChange = (e) => {
     const val = e.target.value;
     setSelectedFacultyId(val);
-    setSelectedDepartmentId(""); // Reset department on faculty change
+    setSelectedDepartmentId("");
   };
 
   const handleExportExcel = async () => {
@@ -254,431 +260,638 @@ const Reports = () => {
     }
   };
 
-  const handleResetYearly = async () => {
-    const confirmed = await toast.confirm(
-      "คุณแน่ใจหรือไม่ที่จะรีเซ็ตวันลาของบุคลากรทุกคน?",
-      "ยืนยันการรีเซ็ตวันลา"
-    );
-    if (!confirmed) return;
-    setResetting(true);
-    try {
-      const response = await reportsAPI.resetYearly();
-      toast.success(
-        `${response.data.message} อัปเดตแล้ว ${response.data.updatedCount} คน`
-      );
-    } catch (error) {
-      toast.error("เกิดข้อผิดพลาด");
-    } finally {
-      setResetting(false);
-    }
+  const resetAllFilters = () => {
+    setSelectedUserId("");
+    setSelectedFacultyId("");
+    setSelectedDepartmentId("");
+    setUserSearchQuery("");
+    setStartDate("");
+    setEndDate("");
+    setStartTime("");
+    setEndTime("");
+    setTimeSlot("all");
+    setMonth("");
+    setYear(new Date().getFullYear());
   };
 
+  // Month labels for Chart
   const monthNames = [
-    "ม.ค.",
-    "ก.พ.",
-    "มี.ค.",
-    "เม.ย.",
-    "พ.ค.",
-    "มิ.ย.",
-    "ก.ค.",
-    "ส.ค.",
-    "ก.ย.",
-    "ต.ค.",
-    "พ.ย.",
-    "ธ.ค.",
+    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
   ];
 
+  // Modern Chart Colors
   const monthlyChartData = {
     labels: monthNames,
     datasets: [
       {
-        label: "จำนวนวันลา",
+        label: "จำนวนวันลา (วัน)",
         data: statistics?.byMonth || [],
-        backgroundColor: "rgba(102, 126, 234, 0.7)",
-        borderColor: "rgba(102, 126, 234, 1)",
-        borderWidth: 1,
+        backgroundColor: "rgba(99, 102, 241, 0.85)",
+        hoverBackgroundColor: "rgba(79, 70, 229, 1)",
+        borderColor: "#4f46e5",
+        borderWidth: 0,
         borderRadius: 8,
+        borderSkipped: false,
+        maxBarThickness: 32,
       },
     ],
   };
+
+  // Dynamic Leave Types Configuration
+  const leaveTypeCodeMap = {
+    sick: { name: "ลาป่วย", color: "#06b6d4" },
+    personal: { name: "ลากิจส่วนตัว", color: "#6366f1" },
+    vacation: { name: "ลาพักผ่อน", color: "#f59e0b" },
+    maternity: { name: "ลาคลอดบุตร", color: "#ec4899" },
+    paternity: { name: "ลาช่วยภริยาคลอด", color: "#8b5cf6" },
+    ordination: { name: "ลาอุปสมบท/ฮัจย์", color: "#eab308" },
+    military: { name: "ลาตรวจเลือกทหาร", color: "#14b8a6" },
+    childcare: { name: "ลาเลี้ยงดูบุตร", color: "#f97316" },
+    other: { name: "อื่นๆ", color: "#64748b" },
+  };
+
+  const typeEntries = useMemo(() => {
+    if (!statistics?.byType) return [];
+    return Object.entries(statistics.byType)
+      .map(([code, days]) => {
+        const meta = leaveTypeCodeMap[code] || { name: code, color: "#64748b" };
+        return {
+          code,
+          name: meta.name,
+          color: meta.color,
+          days: parseFloat(days || 0),
+        };
+      })
+      .filter((item) => item.days > 0);
+  }, [statistics?.byType]);
+
+  const totalTypeDays = typeEntries.reduce((sum, item) => sum + item.days, 0);
 
   const typeChartData = {
-    labels: ["ลาป่วย", "ลากิจ", "ลาพักร้อน"],
+    labels: typeEntries.length > 0 ? typeEntries.map((t) => t.name) : ["ไม่มีข้อมูล"],
     datasets: [
       {
-        data: [
-          statistics?.byType?.sick || 0,
-          statistics?.byType?.personal || 0,
-          statistics?.byType?.vacation || 0,
-        ],
-        backgroundColor: [
-          "rgba(17, 153, 142, 0.8)",
-          "rgba(102, 126, 234, 0.8)",
-          "rgba(246, 211, 101, 0.8)",
-        ],
-        borderWidth: 0,
+        data: typeEntries.length > 0 ? typeEntries.map((t) => t.days) : [0],
+        backgroundColor: typeEntries.length > 0 ? typeEntries.map((t) => t.color) : ["#e2e8f0"],
+        borderWidth: 3,
+        borderColor: "#ffffff",
+        hoverOffset: 6,
       },
     ],
   };
+
+  const approvedCount = (statistics?.byStatus?.approved || 0) + (statistics?.byStatus?.confirmed || 0);
+  const pendingCount = statistics?.byStatus?.pending || 0;
+  const rejectedCount = (statistics?.byStatus?.rejected || 0) + (statistics?.byStatus?.cancelled || 0);
+  const totalStatusCount = approvedCount + pendingCount + rejectedCount;
 
   const statusChartData = {
-    labels: ["อนุมัติแล้ว", "รออนุมัติ", "ไม่อนุมัติ"],
+    labels: ["อนุมัติแล้ว", "รออนุมัติ", "ไม่อนุมัติ/ยกเลิก"],
     datasets: [
       {
-        data: [
-          statistics?.byStatus?.approved || 0,
-          statistics?.byStatus?.pending || 0,
-          statistics?.byStatus?.rejected || 0,
-        ],
+        data: [approvedCount, pendingCount, rejectedCount],
         backgroundColor: [
-          "rgba(16, 185, 129, 0.8)",
-          "rgba(245, 158, 11, 0.8)",
-          "rgba(239, 68, 68, 0.8)",
+          "#10b981", // Emerald
+          "#f59e0b", // Amber
+          "#ef4444", // Crimson
         ],
-        borderWidth: 0,
+        borderWidth: 3,
+        borderColor: "#ffffff",
+        hoverOffset: 6,
       },
     ],
   };
 
-  if (initialLoading) {
-    return (
-      <>
-        <Loading size="fullpage" text="กำลังโหลด..." />
-      </>
-    );
-  }
+  // KPI Calculations
+  const totalRequests = statistics?.totalRequests || 0;
+  const totalDays = statistics?.totalDays || 0;
+  const totalEmployees = statistics?.totalEmployees || 0;
+  const approvalRate = totalRequests > 0 ? ((approvedCount / totalRequests) * 100).toFixed(1) : "0.0";
+  const avgDaysPerRequest = totalRequests > 0 ? (totalDays / totalRequests).toFixed(1) : "0.0";
 
-  // Autocomplete filtering
-  const filteredUsers = usersList.filter(user => {
-    const query = userSearchQuery.toLowerCase();
-    const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-    const employeeId = (user.employeeId || "").toLowerCase();
-    return fullName.includes(query) || employeeId.includes(query);
-  });
+  // Filtered lists for combobox
+  const filteredUsers = useMemo(() => {
+    const query = userSearchQuery.toLowerCase().trim();
+    if (!query) return usersList;
+    return usersList.filter(user => {
+      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+      const employeeId = (user.employeeId || "").toLowerCase();
+      const dept = (user.department?.name || "").toLowerCase();
+      return fullName.includes(query) || employeeId.includes(query) || dept.includes(query);
+    });
+  }, [usersList, userSearchQuery]);
 
   const selectedUser = usersList.find(u => String(u.id) === String(selectedUserId));
   const selectedUserName = selectedUser ? `${selectedUser.firstName} ${selectedUser.lastName}` : "";
 
-  // Cascade department filtering
   const filteredDepartments = selectedFacultyId
     ? departmentsList.filter(dept => String(dept.facultyId) === String(selectedFacultyId))
     : departmentsList;
 
+  const selectedFacultyObj = facultiesList.find(f => String(f.id) === String(selectedFacultyId));
+  const selectedDeptObj = departmentsList.find(d => String(d.id) === String(selectedDepartmentId));
+
+  const hasActiveFilters = Boolean(
+    selectedUserId ||
+    selectedFacultyId ||
+    selectedDepartmentId ||
+    (filterType === "month" && month) ||
+    ((filterType === "custom" || filterType === "datetime") && (startDate || endDate))
+  );
+
+  // Department Table Sorting & calculations
+  const departmentEntries = useMemo(() => {
+    if (!statistics?.byDepartment) return [];
+    const entries = Object.entries(statistics.byDepartment);
+    const maxDays = Math.max(...entries.map(([, days]) => days), 1);
+    return entries
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, days], idx) => ({
+        rank: idx + 1,
+        name,
+        days,
+        percentage: ((days / (totalDays || 1)) * 100).toFixed(1),
+        barWidth: `${Math.min(100, Math.max(8, (days / maxDays) * 100))}%`,
+      }));
+  }, [statistics?.byDepartment, totalDays]);
+
+  if (initialLoading) {
+    return <Loading size="fullpage" text="กำลังโหลดรายงานสถิติ..." />;
+  }
+
   return (
     <>
       <SEO {...SEOConfig.reports} />
-      <div className="reports-page">
-        <div className="page-header">
-          <div>
-            <h1>รายงานและสถิติ</h1>
-            <p>
-              ภาพรวมการลาของบุคลากรในองค์กร
+      <div className="reports-page-container">
+        {/* Executive Header */}
+        <header className="reports-header">
+          <div className="reports-header-text">
+            <h1 className="reports-title">
+              รายงานและสถิติภาพรวม
               {statsLoading && (
-                <span style={{ marginLeft: "8px", color: "#667eea", fontSize: "0.85rem" }}>
-                  <FaSpinner className="spin" style={{ marginRight: "4px" }} />
-                  กำลังอัปเดต...
+                <span className="reports-live-indicator">
+                  <FaSpinner className="spin" /> กำลังประมวลผลข้อมูล...
                 </span>
               )}
+            </h1>
+            <p className="reports-subtitle">
+              วิเคราะห์แนวโน้มการลาของบุคลากร สถิติรายแผนก และข้อมูลสำหรับการบริหารจัดการ
             </p>
           </div>
-          <div className="header-actions">
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="year-select"
-            >
-              <option value="year">ตามปีงบประมาณ</option>
-              <option value="month">ตามรายเดือน</option>
-              <option value="custom">กำหนดช่วงวันที่เอง</option>
-              <option value="datetime">กำหนดช่วงวันและเวลา</option>
-            </select>
 
-            {(filterType === "year" || filterType === "month") && (
-              <select
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
-                className="year-select"
-              >
-                {[...Array(5)].map((_, i) => {
-                  const y = new Date().getFullYear() - i;
-                  return (
-                    <option key={y} value={y}>
-                      ปี {y + 543}
-                    </option>
-                  );
-                })}
-              </select>
-            )}
-
-            {filterType === "month" && (
-              <select
-                value={month}
-                onChange={(e) => setMonth(e.target.value ? Number(e.target.value) : "")}
-                className="year-select"
-              >
-                <option value="">-- ทุกเดือน --</option>
-                {thaiMonthsList.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            )}
-
+          {/* Export & Action Hub */}
+          <div className="reports-export-toolbar">
             <button
-              className="export-btn excel"
+              className="export-action-btn btn-excel"
               onClick={handleExportExcel}
               disabled={!!exportingType}
+              title="ส่งออกรายงานเป็นไฟล์ Microsoft Excel (.xlsx)"
             >
               {exportingType === "excel" ? (
-                <><FaSpinner className="spin" style={{ marginRight: "4px" }} /> กำลังส่งออก...</>
+                <><FaSpinner className="spin" /> <span>กำลังส่งออก...</span></>
               ) : (
-                <><FaFileExcel style={{ marginRight: "4px" }} /> Excel</>
+                <><FaFileExcel className="btn-icon" /> <span>ส่งออก Excel</span></>
               )}
             </button>
+
             <button
-              className="export-btn pdf"
+              className="export-action-btn btn-pdf"
               onClick={handleExportPDF}
               disabled={!!exportingType}
+              title="ส่งออกเอกสารสรุปเป็นไฟล์ PDF (.pdf)"
             >
               {exportingType === "pdf" ? (
-                <><FaSpinner className="spin" style={{ marginRight: "4px" }} /> กำลังส่งออก...</>
+                <><FaSpinner className="spin" /> <span>กำลังสร้าง PDF...</span></>
               ) : (
-                <><FaFilePdf style={{ marginRight: "4px" }} /> PDF</>
+                <><FaFilePdf className="btn-icon" /> <span>ส่งออก PDF</span></>
               )}
             </button>
           </div>
-        </div>
+        </header>
 
-        <div className="filters-card">
-          <h3>
-            <FaFilter /> ค้นหาข้อมูลสำหรับส่งออกรายงาน
-          </h3>
-
-          {filterType === "custom" && (
-            <div className="date-range-filter-row">
-              <div className="filter-group">
-                <label>วันที่เริ่มต้น</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="filter-date-input"
-                />
-              </div>
-              <div className="filter-group">
-                <label>วันที่สิ้นสุด</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="filter-date-input"
-                />
-              </div>
+        {/* Executive Filter Console */}
+        <section className="reports-filter-card">
+          <div className="filter-card-header">
+            <div className="filter-header-title">
+              <FaFilter className="filter-title-icon" />
+              <span>ตัวกรองและเงื่อนไขการค้นหา</span>
             </div>
-          )}
 
-          {filterType === "datetime" && (
-            <div className="datetime-filter-row">
-              <div className="filter-group">
-                <label>วันที่เริ่มต้น</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="filter-date-input"
-                />
-              </div>
-              <div className="filter-group">
-                <label>เวลาเริ่มต้น</label>
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="filter-date-input"
-                />
-              </div>
-              <div className="filter-group">
-                <label>วันที่สิ้นสุด</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="filter-date-input"
-                />
-              </div>
-              <div className="filter-group">
-                <label>เวลาสิ้นสุด</label>
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="filter-date-input"
-                />
-              </div>
-              <div className="filter-group">
-                <label>ช่วงเวลาการลา</label>
-                <select
-                  value={timeSlot}
-                  onChange={(e) => setTimeSlot(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="all">ทุกช่วงเวลา</option>
-                  <option value="full">เต็มวัน (Full Day)</option>
-                  <option value="morning">ครึ่งวันเช้า (Morning)</option>
-                  <option value="afternoon">ครึ่งวันบ่าย (Afternoon)</option>
-                </select>
-              </div>
+            {/* Segmented Mode Selector */}
+            <div className="filter-segmented-nav">
+              <button
+                type="button"
+                className={`segmented-tab ${filterType === "year" ? "active" : ""}`}
+                onClick={() => setFilterType("year")}
+              >
+                <FaCalendarAlt className="tab-icon" /> รายปีงบประมาณ
+              </button>
+              <button
+                type="button"
+                className={`segmented-tab ${filterType === "month" ? "active" : ""}`}
+                onClick={() => setFilterType("month")}
+              >
+                <FaCalendarDay className="tab-icon" /> รายเดือน
+              </button>
+              <button
+                type="button"
+                className={`segmented-tab ${filterType === "custom" ? "active" : ""}`}
+                onClick={() => setFilterType("custom")}
+              >
+                <FaLayerGroup className="tab-icon" /> ระบุช่วงวันที่
+              </button>
+              <button
+                type="button"
+                className={`segmented-tab ${filterType === "datetime" ? "active" : ""}`}
+                onClick={() => setFilterType("datetime")}
+              >
+                <FaClock className="tab-icon" /> วันและเวลาละเอียด
+              </button>
             </div>
-          )}
+          </div>
 
-          <div className="filters-grid">
-            <div className="filter-group">
-              <label>บุคลากร</label>
-              <div className="searchable-select">
-                <div 
-                  className="searchable-select-trigger" 
-                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                >
-                  <span>{selectedUserName || "-- ค้นหารายชื่อ --"}</span>
-                  {selectedUserId && (
-                    <span 
-                      className="clear-select-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedUserId("");
-                        setUserSearchQuery("");
-                      }}
+          <div className="filter-card-body">
+            {/* Row 1: Time Parameters */}
+            <div className="filter-controls-row">
+              {(filterType === "year" || filterType === "month") && (
+                <div className="control-item">
+                  <label className="control-label">ปีงบประมาณ (พ.ศ.)</label>
+                  <div className="select-wrapper">
+                    <select
+                      value={year}
+                      onChange={(e) => setYear(Number(e.target.value))}
+                      className="control-input"
                     >
-                      ✕
+                      {[...Array(6)].map((_, i) => {
+                        const y = new Date().getFullYear() - i + 1;
+                        return (
+                          <option key={y} value={y}>
+                            ปีงบประมาณ {y + 543} ({y})
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {filterType === "month" && (
+                <div className="control-item">
+                  <label className="control-label">ประจำเดือน</label>
+                  <div className="select-wrapper">
+                    <select
+                      value={month}
+                      onChange={(e) => setMonth(e.target.value ? Number(e.target.value) : "")}
+                      className="control-input"
+                    >
+                      <option value="">-- ทุกเดือนในปีงบประมาณ --</option>
+                      {thaiMonthsList.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {(filterType === "custom" || filterType === "datetime") && (
+                <>
+                  <div className="control-item">
+                    <label className="control-label">ตั้งแต่วันที่</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="control-input date-input"
+                    />
+                  </div>
+                  <div className="control-item">
+                    <label className="control-label">ถึงวันที่</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="control-input date-input"
+                    />
+                  </div>
+                </>
+              )}
+
+              {filterType === "datetime" && (
+                <>
+                  <div className="control-item">
+                    <label className="control-label">เวลาเริ่มต้น</label>
+                    <input
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="control-input"
+                    />
+                  </div>
+                  <div className="control-item">
+                    <label className="control-label">เวลาสิ้นสุด</label>
+                    <input
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="control-input"
+                    />
+                  </div>
+                  <div className="control-item">
+                    <label className="control-label">ช่วงเวลาการลา</label>
+                    <div className="select-wrapper">
+                      <select
+                        value={timeSlot}
+                        onChange={(e) => setTimeSlot(e.target.value)}
+                        className="control-input"
+                      >
+                        <option value="all">ทุกช่วงเวลา</option>
+                        <option value="full">เต็มวัน (Full Day)</option>
+                        <option value="morning">ครึ่งวันเช้า (Morning)</option>
+                        <option value="afternoon">ครึ่งวันบ่าย (Afternoon)</option>
+                      </select>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Row 2: Organizational Dimensions */}
+            <div className="filter-controls-row secondary-row">
+              {/* Searchable User Combobox */}
+              <div className="control-item user-combobox-item">
+                <label className="control-label">ค้นหาตามรายชื่อบุคลากร</label>
+                <div className="searchable-combobox">
+                  <div
+                    className={`combobox-trigger ${userDropdownOpen ? "active" : ""}`}
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  >
+                    <div className="trigger-content">
+                      <FaSearch className="search-icon-dim" />
+                      <span className={selectedUserName ? "selected-text" : "placeholder-text"}>
+                        {selectedUserName || "ค้นหาชื่อ-สกุล หรือรหัสบุคลากร..."}
+                      </span>
+                    </div>
+                    {selectedUserId && (
+                      <button
+                        type="button"
+                        className="combobox-clear-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedUserId("");
+                          setUserSearchQuery("");
+                        }}
+                        title="ล้างการเลือก"
+                      >
+                        <FaTimes />
+                      </button>
+                    )}
+                  </div>
+
+                  {userDropdownOpen && (
+                    <>
+                      <div
+                        className="combobox-backdrop"
+                        onClick={() => setUserDropdownOpen(false)}
+                      />
+                      <div className="combobox-menu">
+                        <div className="combobox-search-box">
+                          <FaSearch className="input-search-icon" />
+                          <input
+                            type="text"
+                            className="combobox-input"
+                            placeholder="พิมพ์ชื่อ นามสกุล หรือรหัส..."
+                            value={userSearchQuery}
+                            onChange={(e) => setUserSearchQuery(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            autoFocus
+                          />
+                        </div>
+                        <div className="combobox-list">
+                          {filteredUsers.map((user) => (
+                            <div
+                              key={user.id}
+                              className={`combobox-option ${selectedUserId === user.id ? "selected" : ""}`}
+                              onClick={() => {
+                                setSelectedUserId(user.id);
+                                setUserDropdownOpen(false);
+                                setUserSearchQuery("");
+                              }}
+                            >
+                              <div className="option-avatar">
+                                {user.firstName.charAt(0)}
+                              </div>
+                              <div className="option-details">
+                                <span className="option-name">
+                                  {user.firstName} {user.lastName}
+                                </span>
+                                <span className="option-meta">
+                                  {user.employeeId && `รหัส: ${user.employeeId}`}
+                                  {user.position && ` · ${user.position}`}
+                                  {user.department?.name && ` (${user.department.name})`}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                          {filteredUsers.length === 0 && (
+                            <div className="combobox-empty">
+                              ไม่พบข้อมูลบุคลากรที่ตรงกับคำค้นหา
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Faculty Dropdown */}
+              <div className="control-item">
+                <label className="control-label">คณะ / สำนัก</label>
+                <div className="select-wrapper">
+                  <select
+                    value={selectedFacultyId}
+                    onChange={handleFacultyChange}
+                    className="control-input"
+                  >
+                    <option value="">-- ทุกคณะ / ทุกหน่วยงาน --</option>
+                    {facultiesList.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Department Dropdown */}
+              <div className="control-item">
+                <label className="control-label">สาขาวิชา / ภาควิชา</label>
+                <div className="select-wrapper">
+                  <select
+                    value={selectedDepartmentId}
+                    onChange={(e) => setSelectedDepartmentId(e.target.value)}
+                    className="control-input"
+                  >
+                    <option value="">-- ทุกสาขาวิชา --</option>
+                    {filteredDepartments.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Active Filter Chips & Summary */}
+            {hasActiveFilters && (
+              <div className="active-filters-bar">
+                <span className="filters-bar-label">ตัวกรองที่เลือก:</span>
+                <div className="filter-chips-list">
+                  {selectedUser && (
+                    <span className="filter-chip">
+                      👤 {selectedUser.firstName} {selectedUser.lastName}
+                      <button onClick={() => setSelectedUserId("")}>✕</button>
                     </span>
                   )}
-                  <span className="arrow">▼</span>
+                  {selectedFacultyObj && (
+                    <span className="filter-chip">
+                      🏛️ {selectedFacultyObj.name}
+                      <button onClick={() => { setSelectedFacultyId(""); setSelectedDepartmentId(""); }}>✕</button>
+                    </span>
+                  )}
+                  {selectedDeptObj && (
+                    <span className="filter-chip">
+                      📁 {selectedDeptObj.name}
+                      <button onClick={() => setSelectedDepartmentId("")}>✕</button>
+                    </span>
+                  )}
+                  {month && (
+                    <span className="filter-chip">
+                      🗓️ เดือน {thaiMonthsList.find(m => m.value === month)?.label}
+                      <button onClick={() => setMonth("")}>✕</button>
+                    </span>
+                  )}
+                  {(startDate || endDate) && (
+                    <span className="filter-chip">
+                      📅 {startDate || "เริ่มต้น"} ถึง {endDate || "สิ้นสุด"}
+                      <button onClick={() => { setStartDate(""); setEndDate(""); }}>✕</button>
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    className="clear-all-filters-btn"
+                    onClick={resetAllFilters}
+                  >
+                    ล้างตัวกรองทั้งหมด
+                  </button>
                 </div>
-                
-                {userDropdownOpen && (
-                  <>
-                    <div className="select-overlay" onClick={() => setUserDropdownOpen(false)} />
-                    <div className="searchable-select-dropdown">
-                      <input
-                        type="text"
-                        className="search-input"
-                        placeholder="พิมพ์เพื่อค้นหาด้วยชื่อหรือรหัสพนักงาน..."
-                        value={userSearchQuery}
-                        onChange={(e) => setUserSearchQuery(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        autoFocus
-                      />
-                      <div className="options-list">
-                        {filteredUsers.map((user) => (
-                          <div
-                            key={user.id}
-                            className={`option-item ${selectedUserId === user.id ? "selected" : ""}`}
-                            onClick={() => {
-                              setSelectedUserId(user.id);
-                              setUserDropdownOpen(false);
-                              setUserSearchQuery("");
-                            }}
-                          >
-                            <div className="option-name">{user.firstName} {user.lastName}</div>
-                            <div className="option-sub">
-                              รหัส: {user.employeeId} {user.position ? `| ${user.position}` : ""} {user.department?.name ? `(${user.department.name})` : ""}
-                            </div>
-                          </div>
-                        ))}
-                        {filteredUsers.length === 0 && (
-                          <div className="no-options">ไม่พบข้อมูลผู้ใช้งาน</div>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Executive KPI Bento Grid */}
+        <section className="reports-kpi-grid">
+          {/* KPI 1 */}
+          <div className="kpi-card">
+            <div className="kpi-top">
+              <span className="kpi-label">คำขอลาทั้งหมด</span>
+              <div className="kpi-icon-badge badge-indigo">
+                <FaClipboardList />
+              </div>
+            </div>
+            <div className="kpi-value-row">
+              <span className="kpi-number">{totalRequests.toLocaleString()}</span>
+              <span className="kpi-unit">รายการ</span>
+            </div>
+            <div className="kpi-footer">
+              <span className="kpi-subtext">
+                เฉลี่ย {avgDaysPerRequest} วัน ต่อ 1 คำขอ
+              </span>
+            </div>
+          </div>
+
+          {/* KPI 2 */}
+          <div className="kpi-card">
+            <div className="kpi-top">
+              <span className="kpi-label">จำนวนวันลาสะสม</span>
+              <div className="kpi-icon-badge badge-cyan">
+                <FaCalendarAlt />
+              </div>
+            </div>
+            <div className="kpi-value-row">
+              <span className="kpi-number">{totalDays.toLocaleString()}</span>
+              <span className="kpi-unit">วันทำการ</span>
+            </div>
+            <div className="kpi-footer">
+              <span className="kpi-subtext">
+                นับรวมทุกประเภทการลาในช่วงที่เลือก
+              </span>
+            </div>
+          </div>
+
+          {/* KPI 3 */}
+          <div className="kpi-card">
+            <div className="kpi-top">
+              <span className="kpi-label">บุคลากรในระบบ</span>
+              <div className="kpi-icon-badge badge-violet">
+                <FaUsers />
+              </div>
+            </div>
+            <div className="kpi-value-row">
+              <span className="kpi-number">{totalEmployees.toLocaleString()}</span>
+              <span className="kpi-unit">คน</span>
+            </div>
+            <div className="kpi-footer">
+              <span className="kpi-subtext">
+                บุคลากรที่ active ในระบบทั้งหมด
+              </span>
+            </div>
+          </div>
+
+          {/* KPI 4 */}
+          <div className="kpi-card highlight-card">
+            <div className="kpi-top">
+              <span className="kpi-label">อนุมัติเรียบร้อยแล้ว</span>
+              <div className="kpi-icon-badge badge-emerald">
+                <FaCheckCircle />
+              </div>
+            </div>
+            <div className="kpi-value-row">
+              <span className="kpi-number">{approvedCount.toLocaleString()}</span>
+              <span className="kpi-badge-rate">
+                {approvalRate}% อนุมัติ
+              </span>
+            </div>
+            <div className="kpi-footer">
+              <span className="kpi-subtext">
+                รออนุมัติ {pendingCount} · ไม่อนุมัติ {rejectedCount}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* Executive Visual Analytics Layout */}
+        <section className="reports-analytics-grid">
+          {/* Main Bar Chart */}
+          <div className="analytics-card chart-main-card">
+            <div className="analytics-card-header">
+              <div className="card-title-group">
+                <div className="title-icon-wrap indigo">
+                  <FaChartLine />
+                </div>
+                <div>
+                  <h3 className="card-title">แนวโน้มสถิติการลาประจำเดือน</h3>
+                  <p className="card-desc">สถิติวันลาสะสมในแต่ละเดือนตลอดรอบปีงบประมาณ</p>
+                </div>
               </div>
             </div>
 
-            <div className="filter-group">
-              <label>คณะ</label>
-              <select
-                value={selectedFacultyId}
-                onChange={handleFacultyChange}
-                className="filter-select"
-              >
-                <option value="">-- เลือกคณะทั้งหมด --</option>
-                {facultiesList.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label>แผนก / สาขาวิชา</label>
-              <select
-                value={selectedDepartmentId}
-                onChange={(e) => setSelectedDepartmentId(e.target.value)}
-                className="filter-select"
-              >
-                <option value="">-- เลือกสาขาทั้งหมด --</option>
-                {filteredDepartments.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="filter-note">
-            <FaInfoCircle color="#667eea" style={{ marginRight: "4px", flexShrink: 0 }} />
-            <span>สามารถเลือกตัวกรองเพื่อจำกัดข้อมูลรายงานได้ หากไม่เลือกจะถือเป็นการดึงข้อมูลภาพรวมของทุกแผนกและบุคลากรทุกคน</span>
-          </div>
-        </div>
-
-        <div className="stats-grid">
-          <div className="stat-card">
-            <span className="stat-icon">
-              <FaFileAlt color="white" size={24} />
-            </span>
-            <div className="stat-info">
-              <h3>{statistics?.totalRequests || 0}</h3>
-              <p>คำขอลาทั้งหมด</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <span className="stat-icon">
-              <FaCalendarAlt color="white" size={24} />
-            </span>
-            <div className="stat-info">
-              <h3>{statistics?.totalDays || 0}</h3>
-              <p>วันลาทั้งหมด</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <span className="stat-icon">
-              <FaUsers color="white" size={24} />
-            </span>
-            <div className="stat-info">
-              <h3>{statistics?.totalEmployees || 0}</h3>
-              <p>บุคลากรในระบบ</p>
-            </div>
-          </div>
-          <div className="stat-card">
-            <span className="stat-icon">
-              <FaCheckCircle color="white" size={24} />
-            </span>
-            <div className="stat-info">
-              <h3>{statistics?.byStatus?.approved || 0}</h3>
-              <p>อนุมัติแล้ว</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="charts-grid">
-          <div className="chart-card">
-            <h3>
-              <FaChartLine style={{ marginRight: "8px" }} /> สถิติการลารายเดือน
-            </h3>
-            <div className="chart-container">
+            <div className="chart-canvas-container">
               <Bar
                 data={monthlyChartData}
                 options={{
@@ -686,78 +899,232 @@ const Reports = () => {
                   maintainAspectRatio: false,
                   plugins: {
                     legend: { display: false },
+                    tooltip: {
+                      backgroundColor: "rgba(15, 23, 42, 0.95)",
+                      titleFont: { family: "Sarabun, sans-serif", size: 13, weight: "600" },
+                      bodyFont: { family: "Sarabun, sans-serif", size: 12 },
+                      padding: 12,
+                      cornerRadius: 8,
+                      displayColors: false,
+                      callbacks: {
+                        label: (ctx) => `  จำนวนวันลา: ${ctx.raw} วัน`,
+                      },
+                    },
                   },
                   scales: {
-                    y: { beginAtZero: true },
+                    x: {
+                      grid: { display: false },
+                      ticks: {
+                        font: { family: "Sarabun, sans-serif", size: 12 },
+                        color: "#64748b",
+                      },
+                    },
+                    y: {
+                      beginAtZero: true,
+                      grid: {
+                        color: "rgba(226, 232, 240, 0.8)",
+                      },
+                      ticks: {
+                        font: { family: "Sarabun, sans-serif", size: 12 },
+                        color: "#64748b",
+                        precision: 0,
+                      },
+                    },
                   },
                 }}
               />
             </div>
           </div>
 
-          <div className="chart-card small">
-            <h3>
-              <FaHospital style={{ marginRight: "8px" }} /> ประเภทการลา
-            </h3>
-            <div className="chart-container doughnut">
+          {/* Doughnut: Leave Types */}
+          <div className="analytics-card chart-side-card">
+            <div className="analytics-card-header">
+              <div className="card-title-group">
+                <div className="title-icon-wrap cyan">
+                  <FaHospital />
+                </div>
+                <div>
+                  <h3 className="card-title">สัดส่วนประเภทการลา</h3>
+                  <p className="card-desc">จำแนกตามสิทธิ์การลา</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="doughnut-canvas-container">
               <Doughnut
                 data={typeChartData}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
+                  cutout: "72%",
                   plugins: {
-                    legend: { position: "bottom" },
+                    legend: { display: false },
+                    tooltip: {
+                      backgroundColor: "rgba(15, 23, 42, 0.95)",
+                      titleFont: { family: "Sarabun, sans-serif", size: 13, weight: "600" },
+                      bodyFont: { family: "Sarabun, sans-serif", size: 12 },
+                      padding: 12,
+                      cornerRadius: 8,
+                      callbacks: {
+                        label: (ctx) => {
+                          const val = ctx.raw;
+                          const pct = totalTypeDays > 0 ? ((val / totalTypeDays) * 100).toFixed(1) : 0;
+                          return ` ${ctx.label}: ${val} วัน (${pct}%)`;
+                        },
+                      },
+                    },
                   },
                 }}
               />
+              <div className="doughnut-center-metric">
+                <span className="metric-num">{totalTypeDays}</span>
+                <span className="metric-lbl">วันรวม</span>
+              </div>
+            </div>
+
+            <div className="custom-chart-legend">
+              {typeEntries.length > 0 ? (
+                typeEntries.map((item) => (
+                  <div key={item.code} className="legend-item">
+                    <div className="legend-dot" style={{ backgroundColor: item.color }} />
+                    <span className="legend-name">{item.name}</span>
+                    <span className="legend-val">
+                      {item.days} วัน ({totalTypeDays > 0 ? ((item.days / totalTypeDays) * 100).toFixed(0) : 0}%)
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="legend-item" style={{ justifyContent: "center", color: "#94a3b8" }}>
+                  ยังไม่มีประวัติการลาที่อนุมัติ
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="chart-card small">
-            <h3>
-              <FaClipboardList style={{ marginRight: "8px" }} /> สถานะคำขอ
-            </h3>
-            <div className="chart-container doughnut">
+          {/* Doughnut: Status Distribution */}
+          <div className="analytics-card chart-side-card">
+            <div className="analytics-card-header">
+              <div className="card-title-group">
+                <div className="title-icon-wrap emerald">
+                  <FaClipboardList />
+                </div>
+                <div>
+                  <h3 className="card-title">สถานะคำขอลา</h3>
+                  <p className="card-desc">สัดส่วนผลการพิจารณา</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="doughnut-canvas-container">
               <Doughnut
                 data={statusChartData}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
+                  cutout: "72%",
                   plugins: {
-                    legend: { position: "bottom" },
+                    legend: { display: false },
+                    tooltip: {
+                      backgroundColor: "rgba(15, 23, 42, 0.95)",
+                      titleFont: { family: "Sarabun, sans-serif", size: 13, weight: "600" },
+                      bodyFont: { family: "Sarabun, sans-serif", size: 12 },
+                      padding: 12,
+                      cornerRadius: 8,
+                      callbacks: {
+                        label: (ctx) => {
+                          const val = ctx.raw;
+                          const pct = totalStatusCount > 0 ? ((val / totalStatusCount) * 100).toFixed(1) : 0;
+                          return ` ${ctx.label}: ${val} รายการ (${pct}%)`;
+                        },
+                      },
+                    },
                   },
                 }}
               />
+              <div className="doughnut-center-metric">
+                <span className="metric-num">{totalStatusCount}</span>
+                <span className="metric-lbl">คำขอ</span>
+              </div>
+            </div>
+
+            <div className="custom-chart-legend">
+              <div className="legend-item">
+                <div className="legend-dot dot-emerald" />
+                <span className="legend-name">อนุมัติแล้ว</span>
+                <span className="legend-val">{approvedCount} ({totalStatusCount > 0 ? ((approvedCount / totalStatusCount) * 100).toFixed(0) : 0}%)</span>
+              </div>
+              <div className="legend-item">
+                <div className="legend-dot dot-amber" />
+                <span className="legend-name">รออนุมัติ</span>
+                <span className="legend-val">{pendingCount} ({totalStatusCount > 0 ? ((pendingCount / totalStatusCount) * 100).toFixed(0) : 0}%)</span>
+              </div>
+              <div className="legend-item">
+                <div className="legend-dot dot-crimson" />
+                <span className="legend-name">ไม่อนุมัติ</span>
+                <span className="legend-val">{rejectedCount} ({totalStatusCount > 0 ? ((rejectedCount / totalStatusCount) * 100).toFixed(0) : 0}%)</span>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {statistics?.byDepartment &&
-          Object.keys(statistics.byDepartment).length > 0 && (
-            <div className="department-table-card">
-              <h3>
-                <FaBuilding style={{ marginRight: "8px" }} /> การลาแยกตามแผนก
-              </h3>
-              <table className="department-table">
-                <thead>
-                  <tr>
-                    <th>แผนก</th>
-                    <th>จำนวนวันลา</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(statistics.byDepartment)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([dept, days]) => (
-                      <tr key={dept}>
-                        <td>{dept}</td>
-                        <td>{days} วัน</td>
+        {/* Department Breakdown Visual Leaderboard */}
+        {departmentEntries.length > 0 && (
+          <section className="reports-department-section">
+            <div className="dept-section-card">
+              <div className="analytics-card-header">
+                <div className="card-title-group">
+                  <div className="title-icon-wrap violet">
+                    <FaBuilding />
+                  </div>
+                  <div>
+                    <h3 className="card-title">สถิติการลาแยกตามแผนก / สาขาวิชา</h3>
+                    <p className="card-desc">จัดอันดับปริมาณวันลาสะสมเปรียบเทียบตามโครงสร้างหน่วยงาน</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="dept-table-wrapper">
+                <table className="executive-dept-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: "80px", textAlign: "center" }}>อันดับ</th>
+                      <th>แผนก / สาขาวิชา</th>
+                      <th style={{ width: "45%" }}>สัดส่วนการลาเปรียบเทียบ</th>
+                      <th style={{ textAlign: "right", width: "140px" }}>จำนวนวันลา</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {departmentEntries.map((dept) => (
+                      <tr key={dept.name} className="dept-table-row">
+                        <td style={{ textAlign: "center" }}>
+                          <span className={`rank-pill rank-${dept.rank <= 3 ? dept.rank : "default"}`}>
+                            {dept.rank === 1 ? "🥇 1" : dept.rank === 2 ? "🥈 2" : dept.rank === 3 ? "🥉 3" : dept.rank}
+                          </span>
+                        </td>
+                        <td className="dept-name-cell">
+                          <span className="dept-main-name">{dept.name}</span>
+                        </td>
+                        <td className="dept-bar-cell">
+                          <div className="dept-progress-container">
+                            <div
+                              className={`dept-progress-bar ${dept.rank <= 3 ? `top-${dept.rank}` : ""}`}
+                              style={{ width: dept.barWidth }}
+                            />
+                            <span className="dept-progress-percent">{dept.percentage}%</span>
+                          </div>
+                        </td>
+                        <td className="dept-days-cell">
+                          <span className="dept-days-bold">{dept.days}</span>
+                          <span className="dept-days-unit">วัน</span>
+                        </td>
                       </tr>
                     ))}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
-          )}
+          </section>
+        )}
       </div>
     </>
   );

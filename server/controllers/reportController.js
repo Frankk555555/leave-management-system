@@ -18,6 +18,9 @@ const getLeaveStatistics = async (req, res) => {
       year,
       month,
       timeSlot,
+      userId,
+      facultyId,
+      departmentId,
       startDate: qStartDate,
       endDate: qEndDate,
     } = req.query;
@@ -49,6 +52,25 @@ const getLeaveStatistics = async (req, res) => {
       where.timeSlot = timeSlot;
     }
 
+    if (userId) {
+      where.userId = userId;
+    }
+
+    const userWhere = {};
+    let userRequired = false;
+    if (departmentId) {
+      userWhere.departmentId = departmentId;
+      userRequired = true;
+    }
+
+    const deptWhere = {};
+    let deptRequired = false;
+    if (facultyId) {
+      deptWhere.facultyId = facultyId;
+      deptRequired = true;
+      userRequired = true;
+    }
+
     // Get all leave requests for the range with LeaveType
     const leaveRequests = await LeaveRequest.findAll({
       where,
@@ -57,11 +79,15 @@ const getLeaveStatistics = async (req, res) => {
           model: User,
           as: "user",
           attributes: ["id", "firstName", "lastName", "departmentId"],
+          where: Object.keys(userWhere).length > 0 ? userWhere : undefined,
+          required: userRequired ? true : undefined,
           include: [
             {
               model: Department,
               as: "department",
-              attributes: ["name"],
+              attributes: ["id", "name", "facultyId"],
+              where: Object.keys(deptWhere).length > 0 ? deptWhere : undefined,
+              required: deptRequired ? true : undefined,
             },
           ],
         },
@@ -81,14 +107,14 @@ const getLeaveStatistics = async (req, res) => {
     // Statistics by type
     const byType = validRequests.reduce((acc, reqItem) => {
       const typeCode = reqItem.leaveType?.code || "unknown";
-      acc[typeCode] = (acc[typeCode] || 0) + parseFloat(reqItem.totalDays);
+      acc[typeCode] = (acc[typeCode] || 0) + parseFloat(reqItem.totalDays || 0);
       return acc;
     }, {});
 
     // Statistics by department
     const byDepartment = validRequests.reduce((acc, reqItem) => {
       const dept = reqItem.user?.department?.name || "ไม่ระบุ";
-      acc[dept] = (acc[dept] || 0) + parseFloat(reqItem.totalDays);
+      acc[dept] = (acc[dept] || 0) + parseFloat(reqItem.totalDays || 0);
       return acc;
     }, {});
 
@@ -96,7 +122,7 @@ const getLeaveStatistics = async (req, res) => {
     const byMonth = Array(12).fill(0);
     validRequests.forEach((reqItem) => {
       const m = new Date(reqItem.startDate).getMonth();
-      byMonth[m] += parseFloat(reqItem.totalDays);
+      byMonth[m] += parseFloat(reqItem.totalDays || 0);
     });
 
     // Statistics by status
@@ -105,13 +131,35 @@ const getLeaveStatistics = async (req, res) => {
       return acc;
     }, {});
 
-    const totalEmployees = await User.count({ where: { isActive: true } });
+    // Total employees matching the filter
+    let totalEmployeesWhere = { isActive: true };
+    let totalEmployeesInclude = undefined;
+
+    if (userId) {
+      totalEmployeesWhere.id = userId;
+    } else if (departmentId) {
+      totalEmployeesWhere.departmentId = departmentId;
+    } else if (facultyId) {
+      totalEmployeesInclude = [
+        {
+          model: Department,
+          as: "department",
+          where: { facultyId },
+          required: true,
+        },
+      ];
+    }
+
+    const totalEmployees = await User.count({
+      where: totalEmployeesWhere,
+      include: totalEmployeesInclude,
+    });
 
     res.json({
       year: currentYear,
       totalRequests: leaveRequests.length,
       totalDays: validRequests.reduce(
-        (sum, r) => sum + parseFloat(r.totalDays),
+        (sum, r) => sum + parseFloat(r.totalDays || 0),
         0
       ),
       totalEmployees,
