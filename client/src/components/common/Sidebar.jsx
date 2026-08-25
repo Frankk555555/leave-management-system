@@ -9,6 +9,7 @@ import {
   FaChartBar,
   FaEdit,
   FaClipboardList,
+  FaClipboardCheck,
   FaCalendarAlt,
   FaUsers,
   FaCog,
@@ -64,18 +65,151 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         {/* Sidebar Navigation Menu */}
         <nav className="sidebar-menu">
-          <NavLink
-            to="/dashboard"
-            className={({ isActive }) =>
-              isActive ? "sidebar-link active" : "sidebar-link"
-            }
-            onClick={onClose}
-          >
-            <FaChartBar className="sidebar-icon" /> <span>หน้าหลัก</span>
-          </NavLink>
-
-          {!isAdmin && (
+          {isAdmin ? (
+            /* ========================================================
+               ADMIN NAVIGATION MENU
+               1. หน้าหลัก
+               2. อนุมัติการลา
+               3. จัดการใบลา
+               4. ปฏิทินการลา
+               5. ดาวน์โหลดแบบฟอร์ม
+               6. ระเบียบการลา
+               + จัดการระบบ (Dropdown)
+               ======================================================== */
             <>
+              {/* 1. หน้าหลัก */}
+              <NavLink
+                to="/dashboard"
+                className={({ isActive }) =>
+                  isActive ? "sidebar-link active" : "sidebar-link"
+                }
+                onClick={onClose}
+              >
+                <FaChartBar className="sidebar-icon" /> <span>หน้าหลัก</span>
+              </NavLink>
+
+              {/* 2. อนุมัติการลา */}
+              <NavLink
+                to="/approvals"
+                className={({ isActive }) =>
+                  isActive ? "sidebar-link active" : "sidebar-link"
+                }
+                onClick={onClose}
+              >
+                <FaClipboardCheck className="sidebar-icon" /> <span>อนุมัติการลา</span>
+              </NavLink>
+
+              {/* 3. จัดการใบลา */}
+              <NavLink
+                to="/admin/leaves"
+                className={({ isActive }) =>
+                  isActive ? "sidebar-link active" : "sidebar-link"
+                }
+                onClick={onClose}
+              >
+                <FaClipboardList className="sidebar-icon" /> <span>จัดการใบลา</span>
+              </NavLink>
+
+              {/* 4. ปฏิทินการลา */}
+              <NavLink
+                to="/calendar"
+                className={({ isActive }) =>
+                  isActive ? "sidebar-link active" : "sidebar-link"
+                }
+                onClick={onClose}
+              >
+                <FaCalendarAlt className="sidebar-icon" /> <span>ปฏิทินการลา</span>
+              </NavLink>
+
+              {/* 5. ดาวน์โหลดแบบฟอร์ม */}
+              <NavLink
+                to="/forms"
+                className={({ isActive }) =>
+                  isActive ? "sidebar-link active" : "sidebar-link"
+                }
+                onClick={onClose}
+              >
+                <FaFileAlt className="sidebar-icon" /> <span>ดาวน์โหลดแบบฟอร์ม</span>
+              </NavLink>
+
+              {/* 6. ระเบียบการลา */}
+              <NavLink
+                to="/regulations"
+                className={({ isActive }) =>
+                  isActive ? "sidebar-link active" : "sidebar-link"
+                }
+                onClick={onClose}
+              >
+                <FaBookOpen className="sidebar-icon" /> <span>ระเบียบการลา</span>
+              </NavLink>
+
+              {/* จัดการระบบ (Admin Accordion Dropdown) */}
+              <div className={`sidebar-dropdown ${adminDropdownOpen ? "open" : ""}`}>
+                <button
+                  className="sidebar-link dropdown-toggle-btn"
+                  onClick={toggleAdminDropdown}
+                >
+                  <div className="dropdown-title-group">
+                    <FaCog className="sidebar-icon" /> <span>จัดการระบบ</span>
+                  </div>
+                  <FaChevronDown className="arrow-icon" />
+                </button>
+                
+                <div className="sidebar-dropdown-menu">
+                  <NavLink
+                    to="/reports"
+                    className={({ isActive }) =>
+                      isActive ? "sidebar-sub-link active" : "sidebar-sub-link"
+                    }
+                    onClick={onClose}
+                  >
+                    <FaChartBar className="sidebar-icon" /> <span>รายงานการลา</span>
+                  </NavLink>
+                  <NavLink
+                    to="/users"
+                    className={({ isActive }) =>
+                      isActive ? "sidebar-sub-link active" : "sidebar-sub-link"
+                    }
+                    onClick={onClose}
+                  >
+                    <FaUsersCog className="sidebar-icon" /> <span>จัดการบุคลากร</span>
+                  </NavLink>
+                  <NavLink
+                    to="/leave-types"
+                    className={({ isActive }) =>
+                      isActive ? "sidebar-sub-link active" : "sidebar-sub-link"
+                    }
+                    onClick={onClose}
+                  >
+                    <FaFileAlt className="sidebar-icon" /> <span>ประเภทการลา</span>
+                  </NavLink>
+                  <NavLink
+                    to="/holidays"
+                    className={({ isActive }) =>
+                      isActive ? "sidebar-sub-link active" : "sidebar-sub-link"
+                    }
+                    onClick={onClose}
+                  >
+                    <FaCalendarCheck className="sidebar-icon" /> <span>จัดการวันหยุด</span>
+                  </NavLink>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* ========================================================
+               USER / HEAD NAVIGATION MENU
+               ======================================================== */
+            <>
+              <NavLink
+                to="/dashboard"
+                className={({ isActive }) =>
+                  isActive ? "sidebar-link active" : "sidebar-link"
+                }
+                onClick={onClose}
+              >
+                <FaChartBar className="sidebar-icon" /> <span>หน้าหลัก</span>
+              </NavLink>
+
               <NavLink
                 to="/leave-request"
                 className={({ isActive }) =>
@@ -85,6 +219,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               >
                 <FaEdit className="sidebar-icon" /> <span>ยื่นลา</span>
               </NavLink>
+
               <NavLink
                 to="/leave-history"
                 className={({ isActive }) =>
@@ -94,128 +229,59 @@ const Sidebar = ({ isOpen, onClose }) => {
               >
                 <FaClipboardList className="sidebar-icon" /> <span>ประวัติการลา</span>
               </NavLink>
-            </>
-          )}
 
-          <NavLink
-            to="/calendar"
-            className={({ isActive }) =>
-              isActive ? "sidebar-link active" : "sidebar-link"
-            }
-            onClick={onClose}
-          >
-            <FaCalendarAlt className="sidebar-icon" /> <span>ปฏิทินการลา</span>
-          </NavLink>
-
-          {!isAdmin && (
-            <NavLink
-              to="/team-calendar"
-              className={({ isActive }) =>
-                isActive ? "sidebar-link active" : "sidebar-link"
-              }
-              onClick={onClose}
-            >
-              <FaUsers className="sidebar-icon" /> <span>วันลาทีม</span>
-            </NavLink>
-          )}
-
-          <NavLink
-            to="/forms"
-            className={({ isActive }) =>
-              isActive ? "sidebar-link active" : "sidebar-link"
-            }
-            onClick={onClose}
-          >
-            <FaFileAlt className="sidebar-icon" /> <span>ดาวน์โหลดแบบฟอร์ม</span>
-          </NavLink>
-
-          {isSupervisor && (
-            <NavLink
-              to="/approvals"
-              className={({ isActive }) =>
-                isActive ? "sidebar-link active" : "sidebar-link"
-              }
-              onClick={onClose}
-            >
-              <FaClipboardList className="sidebar-icon" /> <span>อนุมัติใบลา</span>
-            </NavLink>
-          )}
-
-          <NavLink
-            to="/regulations"
-            className={({ isActive }) =>
-              isActive ? "sidebar-link active" : "sidebar-link"
-            }
-            onClick={onClose}
-          >
-            <FaBookOpen className="sidebar-icon" /> <span>ระเบียบการลา</span>
-          </NavLink>
-
-          {/* Admin Leaves Management Link */}
-          {isAdmin && (
-            <NavLink
-              to="/admin/leaves"
-              className={({ isActive }) =>
-                isActive ? "sidebar-link active" : "sidebar-link"
-              }
-              onClick={onClose}
-            >
-              <FaClipboardList className="sidebar-icon" /> <span>จัดการใบลา</span>
-            </NavLink>
-          )}
-
-          {/* Admin Nested Accordion */}
-          {isAdmin && (
-            <div className={`sidebar-dropdown ${adminDropdownOpen ? "open" : ""}`}>
-              <button
-                className="sidebar-link dropdown-toggle-btn"
-                onClick={toggleAdminDropdown}
+              <NavLink
+                to="/calendar"
+                className={({ isActive }) =>
+                  isActive ? "sidebar-link active" : "sidebar-link"
+                }
+                onClick={onClose}
               >
-                <div className="dropdown-title-group">
-                  <FaCog className="sidebar-icon" /> <span>จัดการระบบ</span>
-                </div>
-                <FaChevronDown className="arrow-icon" />
-              </button>
-              
-              <div className="sidebar-dropdown-menu">
+                <FaCalendarAlt className="sidebar-icon" /> <span>ปฏิทินการลา</span>
+              </NavLink>
+
+              <NavLink
+                to="/team-calendar"
+                className={({ isActive }) =>
+                  isActive ? "sidebar-link active" : "sidebar-link"
+                }
+                onClick={onClose}
+              >
+                <FaUsers className="sidebar-icon" /> <span>วันลาทีม</span>
+              </NavLink>
+
+              <NavLink
+                to="/forms"
+                className={({ isActive }) =>
+                  isActive ? "sidebar-link active" : "sidebar-link"
+                }
+                onClick={onClose}
+              >
+                <FaFileAlt className="sidebar-icon" /> <span>ดาวน์โหลดแบบฟอร์ม</span>
+              </NavLink>
+
+              {isSupervisor && (
                 <NavLink
-                  to="/reports"
+                  to="/approvals"
                   className={({ isActive }) =>
-                    isActive ? "sidebar-sub-link active" : "sidebar-sub-link"
+                    isActive ? "sidebar-link active" : "sidebar-link"
                   }
                   onClick={onClose}
                 >
-                  <FaChartBar className="sidebar-icon" /> <span>รายงานการลา</span>
+                  <FaClipboardCheck className="sidebar-icon" /> <span>อนุมัติการลา</span>
                 </NavLink>
-                <NavLink
-                  to="/users"
-                  className={({ isActive }) =>
-                    isActive ? "sidebar-sub-link active" : "sidebar-sub-link"
-                  }
-                  onClick={onClose}
-                >
-                  <FaUsersCog className="sidebar-icon" /> <span>จัดการบุคลากร</span>
-                </NavLink>
-                <NavLink
-                  to="/leave-types"
-                  className={({ isActive }) =>
-                    isActive ? "sidebar-sub-link active" : "sidebar-sub-link"
-                  }
-                  onClick={onClose}
-                >
-                  <FaFileAlt className="sidebar-icon" /> <span>ประเภทการลา</span>
-                </NavLink>
-                <NavLink
-                  to="/holidays"
-                  className={({ isActive }) =>
-                    isActive ? "sidebar-sub-link active" : "sidebar-sub-link"
-                  }
-                  onClick={onClose}
-                >
-                  <FaCalendarCheck className="sidebar-icon" /> <span>จัดการวันหยุด</span>
-                </NavLink>
-              </div>
-            </div>
+              )}
+
+              <NavLink
+                to="/regulations"
+                className={({ isActive }) =>
+                  isActive ? "sidebar-link active" : "sidebar-link"
+                }
+                onClick={onClose}
+              >
+                <FaBookOpen className="sidebar-icon" /> <span>ระเบียบการลา</span>
+              </NavLink>
+            </>
           )}
         </nav>
 
