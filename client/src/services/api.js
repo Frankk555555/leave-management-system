@@ -116,7 +116,7 @@ export const holidaysAPI = {
   create: (data) => api.post("/holidays", data),
   update: (id, data) => api.put(`/holidays/${id}`, data),
   delete: (id) => api.delete(`/holidays/${id}`),
-  initialize: () => api.post("/holidays/init"),
+  initialize: (year) => api.post("/holidays/init", { year }),
 };
 
 // Notifications API

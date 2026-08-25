@@ -10,11 +10,12 @@ const getHolidays = async (req, res) => {
     let where = {};
 
     if (year) {
-      const startOfYear = new Date(year, 0, 1);
-      const endOfYear = new Date(year, 11, 31, 23, 59, 59);
-      where.date = {
-        [Op.between]: [startOfYear, endOfYear],
-      };
+      const yearNum = parseInt(year, 10);
+      if (!isNaN(yearNum)) {
+        where.date = {
+          [Op.between]: [`${yearNum}-01-01`, `${yearNum}-12-31`],
+        };
+      }
     }
 
     const holidays = await Holiday.findAll({
@@ -24,7 +25,10 @@ const getHolidays = async (req, res) => {
     res.json(holidays);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server error", error: process.env.NODE_ENV === "development" ? error.message : undefined });
+    res.status(500).json({
+      message: "Server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
 
@@ -34,10 +38,12 @@ const getHolidays = async (req, res) => {
 const createHoliday = async (req, res) => {
   try {
     const { name, date, description, isHalfDay } = req.body;
+    const yearNum = date ? parseInt(String(date).split("-")[0], 10) : new Date().getFullYear();
 
     const holiday = await Holiday.create({
       name,
       date,
+      year: yearNum,
       description,
       isHalfDay: isHalfDay || false,
     });
@@ -45,7 +51,10 @@ const createHoliday = async (req, res) => {
     res.status(201).json(holiday);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server error", error: process.env.NODE_ENV === "development" ? error.message : undefined });
+    res.status(500).json({
+      message: "Server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
 
@@ -61,19 +70,27 @@ const updateHoliday = async (req, res) => {
     }
 
     const { name, date, description, isHalfDay } = req.body;
-
-    await holiday.update({
+    const updateData = {
       name: name || holiday.name,
       date: date || holiday.date,
       description:
         description !== undefined ? description : holiday.description,
       isHalfDay: isHalfDay !== undefined ? isHalfDay : holiday.isHalfDay,
-    });
+    };
+
+    if (date) {
+      updateData.year = parseInt(String(date).split("-")[0], 10);
+    }
+
+    await holiday.update(updateData);
 
     res.json(holiday);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server error", error: process.env.NODE_ENV === "development" ? error.message : undefined });
+    res.status(500).json({
+      message: "Server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
 
@@ -92,124 +109,127 @@ const deleteHoliday = async (req, res) => {
     res.json({ message: "Holiday removed" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server error", error: process.env.NODE_ENV === "development" ? error.message : undefined });
+    res.status(500).json({
+      message: "Server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
 
-// @desc    Initialize default holidays for current year
+// @desc    Initialize default holidays for year
 // @route   POST /api/holidays/init
 // @access  Private/Admin
 const initializeHolidays = async (req, res) => {
   try {
-    const year = new Date().getFullYear();
+    const targetYear =
+      parseInt(req.body?.year || req.query?.year, 10) ||
+      new Date().getFullYear();
+
     const defaultHolidays = [
       {
         name: "วันขึ้นปีใหม่",
-        date: new Date(year, 0, 1),
+        date: `${targetYear}-01-01`,
         description: "New Year's Day",
       },
       {
         name: "วันมาฆบูชา",
-        date: new Date(year, 1, 24),
+        date: `${targetYear}-02-24`,
         description: "Makha Bucha Day",
       },
       {
         name: "วันจักรี",
-        date: new Date(year, 3, 6),
+        date: `${targetYear}-04-06`,
         description: "Chakri Memorial Day",
       },
       {
         name: "วันสงกรานต์",
-        date: new Date(year, 3, 13),
+        date: `${targetYear}-04-13`,
         description: "Songkran Festival",
       },
       {
         name: "วันสงกรานต์",
-        date: new Date(year, 3, 14),
+        date: `${targetYear}-04-14`,
         description: "Songkran Festival",
       },
       {
         name: "วันสงกรานต์",
-        date: new Date(year, 3, 15),
+        date: `${targetYear}-04-15`,
         description: "Songkran Festival",
       },
       {
         name: "วันแรงงานแห่งชาติ",
-        date: new Date(year, 4, 1),
+        date: `${targetYear}-05-01`,
         description: "National Labour Day",
       },
       {
         name: "วันฉัตรมงคล",
-        date: new Date(year, 4, 4),
+        date: `${targetYear}-05-04`,
         description: "Coronation Day",
       },
       {
         name: "วันวิสาขบูชา",
-        date: new Date(year, 4, 22),
+        date: `${targetYear}-05-22`,
         description: "Visakha Bucha Day",
       },
       {
         name: "วันเฉลิมพระชนมพรรษา ร.10",
-        date: new Date(year, 6, 28),
+        date: `${targetYear}-07-28`,
         description: "H.M. King's Birthday",
       },
       {
         name: "วันเฉลิมพระชนมพรรษา พระราชินี",
-        date: new Date(year, 7, 12),
+        date: `${targetYear}-08-12`,
         description: "H.M. Queen's Birthday",
       },
       {
         name: "วันคล้ายวันสวรรคต ร.9",
-        date: new Date(year, 9, 13),
+        date: `${targetYear}-10-13`,
         description: "King Bhumibol Memorial Day",
       },
       {
         name: "วันปิยมหาราช",
-        date: new Date(year, 9, 23),
+        date: `${targetYear}-10-23`,
         description: "Chulalongkorn Day",
       },
       {
         name: "วันคล้ายวันพระบรมราชสมภพ ร.9",
-        date: new Date(year, 11, 5),
+        date: `${targetYear}-12-05`,
         description: "King Bhumibol's Birthday",
       },
       {
         name: "วันรัฐธรรมนูญ",
-        date: new Date(year, 11, 10),
+        date: `${targetYear}-12-10`,
         description: "Constitution Day",
       },
       {
         name: "วันสิ้นปี",
-        date: new Date(year, 11, 31),
+        date: `${targetYear}-12-31`,
         description: "New Year's Eve",
       },
     ];
 
     for (const holiday of defaultHolidays) {
-      const holidayDate = new Date(holiday.date);
-      holidayDate.setHours(0, 0, 0, 0);
-
       const exists = await Holiday.findOne({
         where: {
-          date: holidayDate,
+          date: holiday.date,
         },
       });
 
       if (!exists) {
         await Holiday.create({
-          ...holiday,
-          date: holidayDate,
+          name: holiday.name,
+          date: holiday.date,
+          year: targetYear,
+          description: holiday.description,
+          isHalfDay: false,
         });
       }
     }
 
-    const startOfYear = new Date(year, 0, 1);
-    const endOfYear = new Date(year, 11, 31, 23, 59, 59);
-
     const holidays = await Holiday.findAll({
       where: {
         date: {
-          [Op.between]: [startOfYear, endOfYear],
+          [Op.between]: [`${targetYear}-01-01`, `${targetYear}-12-31`],
         },
       },
       order: [["date", "ASC"]],
@@ -217,8 +237,11 @@ const initializeHolidays = async (req, res) => {
 
     res.json(holidays);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error", error: process.env.NODE_ENV === "development" ? error.message : undefined });
+    console.error("Initialize holidays error:", error);
+    res.status(500).json({
+      message: "Server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
 
