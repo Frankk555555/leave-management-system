@@ -671,14 +671,22 @@ const UserIngestion = {
   /**
    * Preview external database connection & query
    */
-  async previewDbSync({ query, config = {} }) {
+  async previewDbSync(params = {}) {
     const mysql = require("mysql2/promise");
 
-    const host = config.host || process.env.SYNC_DB_HOST;
-    const port = config.port || process.env.SYNC_DB_PORT || 3306;
-    const database = config.database || process.env.SYNC_DB_NAME;
-    const user = config.user || process.env.SYNC_DB_USER;
-    const password = config.password || process.env.SYNC_DB_PASSWORD;
+    const query = params.query;
+    const config = params.config || {};
+    const host = config.host || params.host || process.env.SYNC_DB_HOST;
+    const port = config.port || params.port || process.env.SYNC_DB_PORT || 3306;
+    const database =
+      config.database || params.database || process.env.SYNC_DB_NAME;
+    const user = config.user || params.user || process.env.SYNC_DB_USER;
+    const password =
+      config.password !== undefined
+        ? config.password
+        : params.password !== undefined
+        ? params.password
+        : process.env.SYNC_DB_PASSWORD || "";
 
     if (!host || !database || !user) {
       throw new IngestionError(
@@ -698,14 +706,40 @@ const UserIngestion = {
       );
     }
 
-    const connection = await mysql.createConnection({
-      host,
-      port: parseInt(port, 10),
-      database,
-      user,
-      password,
-      connectTimeout: 5000,
-    });
+    let connection;
+    try {
+      connection = await mysql.createConnection({
+        host,
+        port: parseInt(port, 10),
+        database,
+        user,
+        password,
+        connectTimeout: 5000,
+      });
+    } catch (connErr) {
+      if (connErr.code === "ECONNREFUSED") {
+        throw new IngestionError(
+          `ไม่สามารถเชื่อมต่อไปยัง ${host}:${port} ได้ (Connection Refused) — กรุณาตรวจสอบว่าเปิด MySQL อยู่หรือไม่ และระบุ Port ถูกต้องหรือไม่ (หมายเหตุ: MySQL เครื่องของคุณถูกตั้งไว้ที่พอร์ต ${process.env.DB_PORT || 3307})`,
+          400
+        );
+      }
+      if (connErr.code === "ER_ACCESS_DENIED_ERROR") {
+        throw new IngestionError(
+          `ชื่อผู้ใช้ (Username) หรือรหัสผ่าน (Password) ไม่ถูกต้อง: ${connErr.message}`,
+          400
+        );
+      }
+      if (connErr.code === "ER_BAD_DB_ERROR") {
+        throw new IngestionError(
+          `ไม่พบฐานข้อมูลชื่อ "${database}" บนเซิร์ฟเวอร์ MySQL`,
+          400
+        );
+      }
+      throw new IngestionError(
+        `การเชื่อมต่อฐานข้อมูลล้มเหลว: ${connErr.message}`,
+        400
+      );
+    }
 
     try {
       const [rows] = await connection.execute(query);
@@ -713,7 +747,7 @@ const UserIngestion = {
         return {
           columns: [],
           preview: [],
-          message: "เชื่อมต่อสำเร็จ แต่ไม่พบข้อมูลจากการค้นหา",
+          message: "เชื่อมต่อสำเร็จ แต่ไม่พบข้อมูลจากการค้นหา (0 rows)",
         };
       }
 
@@ -725,22 +759,42 @@ const UserIngestion = {
         columns,
         preview,
       };
+    } catch (queryErr) {
+      if (queryErr.code === "ER_NO_SUCH_TABLE") {
+        throw new IngestionError(
+          `ไม่พบตารางตามคำสั่ง SQL — หากเป็นการทดสอบ กรุณากดปุ่ม "ตั้งค่าตารางจำลองในระบบเพื่อทดสอบ" ด้านบนก่อน (${queryErr.message})`,
+          400
+        );
+      }
+      throw new IngestionError(
+        `คำสั่ง SQL ไม่ถูกต้อง: ${queryErr.message}`,
+        400
+      );
     } finally {
-      await connection.end();
+      if (connection) await connection.end();
     }
   },
 
   /**
    * Execute external database synchronization
    */
-  async executeDbSync({ query, mapping, config = {} }) {
+  async executeDbSync(params = {}) {
     const mysql = require("mysql2/promise");
 
-    const host = config.host || process.env.SYNC_DB_HOST;
-    const port = config.port || process.env.SYNC_DB_PORT || 3306;
-    const database = config.database || process.env.SYNC_DB_NAME;
-    const user = config.user || process.env.SYNC_DB_USER;
-    const password = config.password || process.env.SYNC_DB_PASSWORD;
+    const query = params.query;
+    const mapping = params.mapping;
+    const config = params.config || {};
+    const host = config.host || params.host || process.env.SYNC_DB_HOST;
+    const port = config.port || params.port || process.env.SYNC_DB_PORT || 3306;
+    const database =
+      config.database || params.database || process.env.SYNC_DB_NAME;
+    const user = config.user || params.user || process.env.SYNC_DB_USER;
+    const password =
+      config.password !== undefined
+        ? config.password
+        : params.password !== undefined
+        ? params.password
+        : process.env.SYNC_DB_PASSWORD || "";
 
     if (!host || !database || !user) {
       throw new IngestionError(
@@ -760,14 +814,28 @@ const UserIngestion = {
       );
     }
 
-    const connection = await mysql.createConnection({
-      host,
-      port: parseInt(port, 10),
-      database,
-      user,
-      password,
-      connectTimeout: 5000,
-    });
+    let connection;
+    try {
+      connection = await mysql.createConnection({
+        host,
+        port: parseInt(port, 10),
+        database,
+        user,
+        password,
+        connectTimeout: 5000,
+      });
+    } catch (connErr) {
+      if (connErr.code === "ECONNREFUSED") {
+        throw new IngestionError(
+          `ไม่สามารถเชื่อมต่อไปยัง ${host}:${port} ได้ (Connection Refused) — กรุณาตรวจสอบ Port (MySQL เครื่องของคุณใช้พอร์ต ${process.env.DB_PORT || 3307})`,
+          400
+        );
+      }
+      throw new IngestionError(
+        `การเชื่อมต่อฐานข้อมูลล้มเหลว: ${connErr.message}`,
+        400
+      );
+    }
 
     try {
       const [rows] = await connection.execute(query);
@@ -777,8 +845,13 @@ const UserIngestion = {
         message: `ซิงค์ข้อมูลจากฐานข้อมูลเสร็จสิ้น: สำเร็จ ${results.success.length} รายการ, ล้มเหลว ${results.failed.length} รายการ`,
         results,
       };
+    } catch (queryErr) {
+      throw new IngestionError(
+        `เกิดข้อผิดพลาดในการดึงข้อมูล: ${queryErr.message}`,
+        400
+      );
     } finally {
-      await connection.end();
+      if (connection) await connection.end();
     }
   },
 
@@ -790,12 +863,20 @@ const UserIngestion = {
       throw new IngestionError("กรุณาระบุ URL ของ API", 400);
     }
 
-    const isSafe = await this.isSSRFSafeUrl(url);
-    if (!isSafe) {
-      throw new IngestionError(
-        "ไม่อนุญาตให้เชื่อมต่อไปยัง URL ปลายทางที่ระบุ (Security Policy)",
-        403
-      );
+    const isDev = process.env.NODE_ENV === "development";
+    const isLocalhost =
+      url.includes("localhost") ||
+      url.includes("127.0.0.1") ||
+      url.includes("::1");
+
+    if (!isDev || !isLocalhost) {
+      const isSafe = await isSSRFSafeUrl(url);
+      if (!isSafe) {
+        throw new IngestionError(
+          "ไม่อนุญาตให้เชื่อมต่อไปยัง URL ปลายทางที่ระบุ (Security Policy)",
+          403
+        );
+      }
     }
 
     const fetchOptions = {
@@ -816,12 +897,17 @@ const UserIngestion = {
       }
     }
 
-    const response = await axios.get(url, {
+    const axiosConfig = {
       headers: fetchOptions.headers,
-      httpAgent: ssrfFilter(url),
-      httpsAgent: ssrfFilter(url),
       timeout: 10000,
-    });
+    };
+
+    if (!isDev || !isLocalhost) {
+      axiosConfig.httpAgent = ssrfFilter(url);
+      axiosConfig.httpsAgent = ssrfFilter(url);
+    }
+
+    const response = await axios.get(url, axiosConfig);
 
     const data = response.data;
     const rows = Array.isArray(data)
@@ -855,12 +941,20 @@ const UserIngestion = {
       throw new IngestionError("ข้อมูลไม่ครบถ้วน", 400);
     }
 
-    const isSafe = await this.isSSRFSafeUrl(url);
-    if (!isSafe) {
-      throw new IngestionError(
-        "ไม่อนุญาตให้เชื่อมต่อไปยัง URL ปลายทางที่ระบุ (Security Policy)",
-        403
-      );
+    const isDev = process.env.NODE_ENV === "development";
+    const isLocalhost =
+      url.includes("localhost") ||
+      url.includes("127.0.0.1") ||
+      url.includes("::1");
+
+    if (!isDev || !isLocalhost) {
+      const isSafe = await isSSRFSafeUrl(url);
+      if (!isSafe) {
+        throw new IngestionError(
+          "ไม่อนุญาตให้เชื่อมต่อไปยัง URL ปลายทางที่ระบุ (Security Policy)",
+          403
+        );
+      }
     }
 
     const fetchOptions = {
@@ -881,12 +975,17 @@ const UserIngestion = {
       }
     }
 
-    const response = await axios.get(url, {
+    const axiosConfig = {
       headers: fetchOptions.headers,
-      httpAgent: ssrfFilter(url),
-      httpsAgent: ssrfFilter(url),
       timeout: 10000,
-    });
+    };
+
+    if (!isDev || !isLocalhost) {
+      axiosConfig.httpAgent = ssrfFilter(url);
+      axiosConfig.httpsAgent = ssrfFilter(url);
+    }
+
+    const response = await axios.get(url, axiosConfig);
 
     const data = response.data;
     const rows = Array.isArray(data)

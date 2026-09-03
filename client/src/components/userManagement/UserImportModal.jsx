@@ -25,7 +25,7 @@ const UserImportModal = ({ isOpen, onClose, onSuccess }) => {
   // Sync state
   const [dbConfig, setDbConfig] = useState({
     host: "127.0.0.1",
-    port: "3306",
+    port: "3307",
     database: "leave_management",
     user: "root",
     password: "",
@@ -187,7 +187,11 @@ const UserImportModal = ({ isOpen, onClose, onSuccess }) => {
       }
     } catch (error) {
       console.error(error);
-      toast.error(error.response?.data?.message || "ไม่สามารถเชื่อมต่อได้");
+      toast.error(
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          "ไม่สามารถเชื่อมต่อได้"
+      );
     } finally {
       setIsTestingConn(false);
     }
@@ -647,14 +651,19 @@ const UserImportModal = ({ isOpen, onClose, onSuccess }) => {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Port *</label>
+                    <label>
+                      Port *{" "}
+                      <small style={{ color: "#6b7280", fontWeight: "normal" }}>
+                        (MySQL เครื่องนี้: 3307)
+                      </small>
+                    </label>
                     <input
                       type="text"
                       value={dbConfig.port}
                       onChange={(e) =>
                         setDbConfig({ ...dbConfig, port: e.target.value })
                       }
-                      placeholder="3306"
+                      placeholder="3307"
                     />
                   </div>
                 </div>

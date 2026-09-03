@@ -164,7 +164,11 @@ const UserManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("คุณต้องการลบบุคลากรนี้ใช่หรือไม่?")) {
+    const confirmed = await toast.confirm(
+      "คุณต้องการลบบุคลากรนี้ใช่หรือไม่?",
+      "ยืนยันการลบบุคลากร"
+    );
+    if (!confirmed) {
       return;
     }
     try {

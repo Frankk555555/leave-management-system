@@ -255,7 +255,7 @@ router.post("/import-db-sync", protect, admin, executeDbSync);
 router.post("/import-api-preview", protect, admin, previewApiSync);
 router.post("/import-api-sync", protect, admin, executeApiSync);
 router.post("/setup-mock-db", protect, admin, setupMockDb);
-router.get("/mock-university-api", protect, admin, getMockUniversityApi);
+router.get("/mock-university-api", getMockUniversityApi);
 
 router.get("/supervisors", protect, getSupervisors); // Protected - requires authentication
 router
