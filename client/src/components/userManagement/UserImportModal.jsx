@@ -13,6 +13,7 @@ import {
 } from "react-icons/fa";
 import { usersAPI } from "../../services/api";
 import { useToast } from "../common/Toast";
+import { getPersonnelTypeBadge } from "../../constants/personnelTypes";
 
 const UserImportModal = ({ isOpen, onClose, onSuccess }) => {
   const toast = useToast();
@@ -30,7 +31,7 @@ const UserImportModal = ({ isOpen, onClose, onSuccess }) => {
     user: "root",
     password: "",
     query:
-      "SELECT emp_id, first_name, last_name, email, position_title, role_name, phone_no, dept_name, faculty_name, start_date FROM mock_university_personnel",
+      "SELECT emp_id, first_name, last_name, email, position_title, personnel_type, dept_name, faculty_name, role_name, phone_no, start_date FROM mock_university_personnel",
   });
 
   const [apiConfig, setApiConfig] = useState({
@@ -462,23 +463,76 @@ const UserImportModal = ({ isOpen, onClose, onSuccess }) => {
     return (
       <div className="preview-section">
         <h4>
-          <FaUsers style={{ marginRight: "6px" }} /> ตัวอย่างข้อมูล 5 รายการแรก
+          <FaUsers style={{ marginRight: "6px" }} /> ตัวอย่างข้อมูล ({previewRows.length} รายการแรก)
         </h4>
         <div className="preview-table-wrapper">
           <table className="preview-table">
             <thead>
               <tr>
-                {sourceColumns.map((col) => (
-                  <th key={col}>{col}</th>
-                ))}
+                {sourceColumns.map((col) => {
+                  const isPersonnelTypeCol =
+                    col === "personnel_type" ||
+                    col === "personnelType" ||
+                    fieldMapping.personnelType === col;
+                  return (
+                    <th key={col}>
+                      <div>{col}</div>
+                      {isPersonnelTypeCol && (
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            fontWeight: "600",
+                            color: "#4f46e5",
+                            background: "#e0e7ff",
+                            padding: "1px 6px",
+                            borderRadius: "4px",
+                            display: "inline-block",
+                            marginTop: "3px",
+                          }}
+                        >
+                          ประเภทบุคลากร
+                        </span>
+                      )}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
               {previewRows.map((row, idx) => (
                 <tr key={idx}>
-                  {sourceColumns.map((col) => (
-                    <td key={col}>{String(row[col] ?? "-")}</td>
-                  ))}
+                  {sourceColumns.map((col) => {
+                    const isPersonnelTypeCol =
+                      col === "personnel_type" ||
+                      col === "personnelType" ||
+                      fieldMapping.personnelType === col;
+
+                    if (isPersonnelTypeCol && row[col]) {
+                      const badge = getPersonnelTypeBadge(row[col]);
+                      return (
+                        <td key={col}>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              padding: "2px 8px",
+                              borderRadius: "9999px",
+                              fontSize: "11px",
+                              fontWeight: "600",
+                              backgroundColor: badge.bg,
+                              color: badge.color,
+                              border: `1px solid ${badge.color}33`,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {badge.label}
+                          </span>
+                        </td>
+                      );
+                    }
+
+                    return <td key={col}>{String(row[col] ?? "-")}</td>;
+                  })}
                 </tr>
               ))}
             </tbody>

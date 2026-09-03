@@ -81,3 +81,13 @@ export const getPersonnelTypeLabel = (typeId) => {
 export const getPersonnelTypeShortLabel = (typeId) => {
   return getPersonnelTypeInfo(typeId).shortLabel;
 };
+
+export const getPersonnelTypeBadge = (typeId) => {
+  const info = getPersonnelTypeInfo(typeId);
+  return {
+    label: info.shortLabel,
+    color: info.color,
+    bg: info.bg,
+    badgeClass: info.badgeClass,
+  };
+};

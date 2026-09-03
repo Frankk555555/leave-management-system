@@ -827,10 +827,10 @@ const UserIngestion = {
       }
 
       const columns = Object.keys(rows[0]);
-      const preview = rows.slice(0, 5);
+      const preview = rows.slice(0, 10);
 
       return {
-        message: "เชื่อมต่อฐานข้อมูลสำเร็จ",
+        message: `เชื่อมต่อและดึงข้อมูลสำเร็จ (พบ ${rows.length} รายการ)`,
         columns,
         preview,
       };
@@ -999,10 +999,10 @@ const UserIngestion = {
     }
 
     const columns = Object.keys(rows[0]);
-    const preview = rows.slice(0, 5);
+    const preview = rows.slice(0, 10);
 
     return {
-      message: "เชื่อมต่อ API สำเร็จ",
+      message: `เชื่อมต่อ API สำเร็จ (พบ ${rows.length} รายการ)`,
       columns,
       preview,
     };
@@ -1202,7 +1202,7 @@ const UserIngestion = {
         name_first: "รศ.ดร.กิตติพงษ์",
         name_last: "เจริญสุข",
         email_address: "kittipong.c@bru.ac.th",
-        position_title: "อาจารย์ประจำสาขาวิชาคณิตศาสตร์",
+        position_title: "รองศาสตราจารย์ประจำสาขาวิชาคณิตศาสตร์",
         personnel_type: "civil_servant_academic",
         job_role: "employee",
         phone_no: "0811223344",
@@ -1212,6 +1212,19 @@ const UserIngestion = {
       },
       {
         emp_id: "UNI002",
+        name_first: "นางสมใจ",
+        name_last: "พิทักษ์ธรรม",
+        email_address: "somjai.p@bru.ac.th",
+        position_title: "นักวิเคราะห์นโยบายและแผนชำนาญการ",
+        personnel_type: "civil_servant_support",
+        job_role: "employee",
+        phone_no: "0823456789",
+        division_name: "สำนักงานอธิการบดี",
+        dept_name: "กองนโยบายและแผน",
+        start_date: "2017-06-15",
+      },
+      {
+        emp_id: "UNI003",
         name_first: "ดร.วรรณภา",
         name_last: "ศรีสวัสดิ์",
         email_address: "wannapa.s@bru.ac.th",
@@ -1224,24 +1237,11 @@ const UserIngestion = {
         start_date: "2021-08-15",
       },
       {
-        emp_id: "UNI003",
-        name_first: "ผศ.มานพ",
-        name_last: "ยอดดี",
-        email_address: "manop.y@bru.ac.th",
-        position_title: "หัวหน้าภาควิชาคณิตศาสตร์",
-        personnel_type: "civil_servant_academic",
-        job_role: "head",
-        phone_no: "0855443322",
-        division_name: "คณะวิทยาศาสตร์",
-        dept_name: "สาขาวิชาคณิตศาสตร์",
-        start_date: "2015-05-10",
-      },
-      {
         emp_id: "UNI004",
         name_first: "นางสาวศิริลักษณ์",
         name_last: "ใจงาม",
         email_address: "sirilak.j@bru.ac.th",
-        position_title: "เจ้าหน้าที่บริหารงานทั่วไป",
+        position_title: "เจ้าหน้าที่บริหารงานทั่วไปปฏิบัติการ",
         personnel_type: "university_employee_support",
         job_role: "employee",
         phone_no: "0877665544",
@@ -1261,6 +1261,19 @@ const UserIngestion = {
         division_name: "คณะวิทยาศาสตร์",
         dept_name: "สาขาวิชาเคมี",
         start_date: "2020-11-01",
+      },
+      {
+        emp_id: "UNI006",
+        name_first: "นายสมศักดิ์",
+        name_last: "รักงานดี",
+        email_address: "somsak.r@bru.ac.th",
+        position_title: "เจ้าหน้าที่บริการการศึกษาและเทคโนโลยี",
+        personnel_type: "temporary_employee",
+        job_role: "employee",
+        phone_no: "0844332211",
+        division_name: "คณะวิทยาศาสตร์",
+        dept_name: "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        start_date: "2023-05-01",
       },
     ];
   },
@@ -1288,94 +1301,102 @@ const UserIngestion = {
       )
     `);
 
-    const countResult = await sequelize.query(
-      "SELECT COUNT(*) as count FROM mock_university_personnel",
-      { type: QueryTypes.SELECT }
-    );
-    const count = countResult[0].count;
+    // Reset table with all 5 personnel types (6 sample records)
+    await sequelize.query("DELETE FROM mock_university_personnel");
 
-    if (count === 0) {
-      const mockUsers = [
-        [
-          "UNI001",
-          "รศ.ดร.กิตติพงษ์",
-          "เจริญสุข",
-          "kittipong.c@bru.ac.th",
-          "อาจารย์ประจำสาขาวิชาวิทยาการคอมพิวเตอร์",
-          "civil_servant_academic",
-          "employee",
-          "0811223344",
-          "สาขาวิชาวิทยาการคอมพิวเตอร์",
-          "คณะวิทยาศาสตร์",
-          "2019-03-01",
-        ],
-        [
-          "UNI002",
-          "ดร.วรรณภา",
-          "ศรีสวัสดิ์",
-          "wannapa.s@bru.ac.th",
-          "อาจารย์ประจำสาขาวิชาเทคโนโลยีสารสนเทศ",
-          "university_employee_academic",
-          "employee",
-          "0899887766",
-          "สาขาวิชาเทคโนโลยีสารสนเทศ",
-          "คณะวิทยาศาสตร์",
-          "2021-08-15",
-        ],
-        [
-          "UNI003",
-          "ผศ.มานพ",
-          "ยอดดี",
-          "manop.y@bru.ac.th",
-          "หัวหน้าภาควิชาคณิตศาสตร์",
-          "civil_servant_academic",
-          "head",
-          "0855443322",
-          "สาขาวิชาคณิตศาสตร์",
-          "คณะวิทยาศาสตร์",
-          "2015-05-10",
-        ],
-        [
-          "UNI004",
-          "นางสาวศิริลักษณ์",
-          "ใจงาม",
-          "sirilak.j@bru.ac.th",
-          "เจ้าหน้าที่บริหารงานทั่วไป",
-          "university_employee_support",
-          "employee",
-          "0877665544",
-          "สำนักงานอธิการบดี",
-          "สำนักงานอธิการบดี",
-          "2022-01-10",
-        ],
-        [
-          "UNI005",
-          "ดร.ณรงค์",
-          "แก้วสะอาด",
-          "narong.k@bru.ac.th",
-          "อาจารย์อัตราจ้างสาขาวิชาเคมี",
-          "contract_lecturer",
-          "employee",
-          "0866554433",
-          "สาขาวิชาเคมี",
-          "คณะวิทยาศาสตร์",
-          "2020-11-01",
-        ],
-      ];
+    const mockUsers = [
+      [
+        "UNI001",
+        "รศ.ดร.กิตติพงษ์",
+        "เจริญสุข",
+        "kittipong.c@bru.ac.th",
+        "รองศาสตราจารย์ประจำสาขาวิชาคณิตศาสตร์",
+        "civil_servant_academic",
+        "employee",
+        "0811223344",
+        "สาขาวิชาคณิตศาสตร์",
+        "คณะวิทยาศาสตร์",
+        "2019-03-01",
+      ],
+      [
+        "UNI002",
+        "นางสมใจ",
+        "พิทักษ์ธรรม",
+        "somjai.p@bru.ac.th",
+        "นักวิเคราะห์นโยบายและแผนชำนาญการ",
+        "civil_servant_support",
+        "employee",
+        "0823456789",
+        "กองนโยบายและแผน",
+        "สำนักงานอธิการบดี",
+        "2017-06-15",
+      ],
+      [
+        "UNI003",
+        "ดร.วรรณภา",
+        "ศรีสวัสดิ์",
+        "wannapa.s@bru.ac.th",
+        "อาจารย์ประจำสาขาวิชาเทคโนโลยีสารสนเทศ",
+        "university_employee_academic",
+        "employee",
+        "0899887766",
+        "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "คณะวิทยาศาสตร์",
+        "2021-08-15",
+      ],
+      [
+        "UNI004",
+        "นางสาวศิริลักษณ์",
+        "ใจงาม",
+        "sirilak.j@bru.ac.th",
+        "เจ้าหน้าที่บริหารงานทั่วไปปฏิบัติการ",
+        "university_employee_support",
+        "employee",
+        "0877665544",
+        "สำนักงานอธิการบดี",
+        "สำนักงานอธิการบดี",
+        "2022-01-10",
+      ],
+      [
+        "UNI005",
+        "ดร.ณรงค์",
+        "แก้วสะอาด",
+        "narong.k@bru.ac.th",
+        "อาจารย์อัตราจ้างสาขาวิชาเคมี",
+        "contract_lecturer",
+        "employee",
+        "0866554433",
+        "สาขาวิชาเคมี",
+        "คณะวิทยาศาสตร์",
+        "2020-11-01",
+      ],
+      [
+        "UNI006",
+        "นายสมศักดิ์",
+        "รักงานดี",
+        "somsak.r@bru.ac.th",
+        "เจ้าหน้าที่บริการการศึกษาและเทคโนโลยี",
+        "temporary_employee",
+        "employee",
+        "0844332211",
+        "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "คณะวิทยาศาสตร์",
+        "2023-05-01",
+      ],
+    ];
 
-      for (const user of mockUsers) {
-        await sequelize.query(
-          `INSERT INTO mock_university_personnel 
-          (emp_id, first_name, last_name, email, position_title, personnel_type, role_name, phone_no, dept_name, faculty_name, start_date) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          { replacements: user }
-        );
-      }
+    for (const user of mockUsers) {
+      await sequelize.query(
+        `INSERT INTO mock_university_personnel 
+        (emp_id, first_name, last_name, email, position_title, personnel_type, role_name, phone_no, dept_name, faculty_name, start_date) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        { replacements: user }
+      );
     }
 
     return {
       message:
-        "ตั้งค่าตารางจำลอง mock_university_personnel เรียบร้อยแล้ว พร้อมข้อมูลบุคลากร 5 รายการ",
+        "ตั้งค่าตารางจำลอง mock_university_personnel เรียบร้อยแล้ว พร้อมข้อมูลบุคลากรครบทั้ง 5 ประเภท (6 รายการ)",
     };
   },
 };
