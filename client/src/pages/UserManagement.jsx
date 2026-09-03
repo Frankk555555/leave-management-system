@@ -30,6 +30,10 @@ import useCollectionQuery from "../hooks/useCollectionQuery";
 import UserFormModal from "../components/userManagement/UserFormModal";
 import PasswordResetModal from "../components/userManagement/PasswordResetModal";
 import UserImportModal from "../components/userManagement/UserImportModal";
+import {
+  PERSONNEL_TYPES,
+  getPersonnelTypeInfo,
+} from "../constants/personnelTypes";
 import "./UserManagement.css";
 
 const mapUserBalances = (u) => {
@@ -75,6 +79,29 @@ const getRoleBadge = (role) => {
     default:
       return <span className="role-badge employee">บุคลากร</span>;
   }
+};
+
+const getPersonnelBadge = (personnelType) => {
+  const info = getPersonnelTypeInfo(personnelType);
+  return (
+    <span
+      className={`personnel-badge ${info.badgeClass}`}
+      style={{
+        backgroundColor: info.bg,
+        color: info.color,
+        border: `1px solid ${info.color}40`,
+        borderRadius: "20px",
+        padding: "3px 9px",
+        fontSize: "0.78rem",
+        fontWeight: "600",
+        whiteSpace: "nowrap",
+        display: "inline-block",
+      }}
+      title={info.label}
+    >
+      {info.shortLabel}
+    </span>
+  );
 };
 
 const UserManagement = () => {
@@ -123,10 +150,13 @@ const UserManagement = () => {
     ],
     initialFilters: {
       role: "all",
+      personnelType: "all",
       facultyId: "all",
       departmentId: "all",
     },
     filterExtractors: {
+      personnelType: (u) =>
+        u.personnelType || "university_employee_academic",
       facultyId: (u) =>
         u.department?.facultyId || u.department?.faculty?.id || "",
       departmentId: (u) => u.departmentId || u.department?.id || "",
@@ -134,11 +164,13 @@ const UserManagement = () => {
   });
 
   const filterRole = filters.role || "all";
+  const filterPersonnelType = filters.personnelType || "all";
   const filterFaculty = filters.facultyId || "all";
   const filterDepartment = filters.departmentId || "all";
   const { data: filterDepartments = [] } = useDepartments(filterFaculty);
 
   const setFilterRole = (role) => setFilter("role", role);
+  const setFilterPersonnelType = (type) => setFilter("personnelType", type);
   const setFilterFaculty = (facultyId) => {
     setFilters((prev) => ({
       ...prev,
@@ -236,6 +268,20 @@ const UserManagement = () => {
             </select>
 
             <select
+              value={filterPersonnelType}
+              onChange={(e) => setFilterPersonnelType(e.target.value)}
+              className="directory-filter-select"
+              aria-label="กรองตามประเภทบุคลากร 5 ประเภท"
+            >
+              <option value="all">ทุกประเภทบุคลากร</option>
+              {PERSONNEL_TYPES.map((pt) => (
+                <option key={pt.id} value={pt.id}>
+                  {pt.label}
+                </option>
+              ))}
+            </select>
+
+            <select
               value={filterFaculty}
               onChange={(e) => {
                 setFilterFaculty(e.target.value);
@@ -279,6 +325,7 @@ const UserManagement = () => {
                 <th>อีเมล</th>
                 <th>สาขาวิชา/หน่วยงาน</th>
                 <th>ตำแหน่ง</th>
+                <th>ประเภทบุคลากร</th>
                 <th>บทบาท</th>
                 <th>วันลาคงเหลือ</th>
                 <th>จัดการ</th>
@@ -315,6 +362,7 @@ const UserManagement = () => {
                       <td>{user.email}</td>
                       <td>{user.department?.name || user.department || "-"}</td>
                       <td>{user.position}</td>
+                      <td>{getPersonnelBadge(user.personnelType)}</td>
                       <td>{getRoleBadge(user.role)}</td>
                       <td>
                         <div className="leave-balance-cell">
@@ -463,7 +511,7 @@ const UserManagement = () => {
               {filteredUsers.length === 0 && (
                 <tr>
                   <td
-                    colSpan="9"
+                    colSpan="10"
                     style={{
                       textAlign: "center",
                       padding: "2.5rem 1rem",
@@ -518,6 +566,12 @@ const UserManagement = () => {
                   <div className="user-card-info">
                     <span className="info-label">ตำแหน่ง:</span>
                     <span className="info-value">{user.position}</span>
+                  </div>
+                  <div className="user-card-info">
+                    <span className="info-label">ประเภท:</span>
+                    <span className="info-value">
+                      {getPersonnelBadge(user.personnelType)}
+                    </span>
                   </div>
                   <div className="user-card-info balances">
                     <span className="info-label">วันลาคงเหลือ:</span>

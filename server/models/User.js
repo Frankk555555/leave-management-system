@@ -48,6 +48,12 @@ const User = sequelize.define(
     position: {
       type: DataTypes.STRING(80),
     },
+    personnelType: {
+      type: DataTypes.STRING(50),
+      defaultValue: "university_employee_academic",
+      field: "personnel_type",
+      comment: "ประเภทบุคลากร 5 ประเภทตามระเบียบมหาวิทยาลัย",
+    },
     role: {
       type: DataTypes.ENUM("employee", "head", "admin"),
       defaultValue: "employee",

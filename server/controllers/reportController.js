@@ -21,6 +21,7 @@ const getLeaveStatistics = async (req, res) => {
       userId,
       facultyId,
       departmentId,
+      personnelType,
       startDate: qStartDate,
       endDate: qEndDate,
     } = req.query;
@@ -60,6 +61,11 @@ const getLeaveStatistics = async (req, res) => {
     let userRequired = false;
     if (departmentId) {
       userWhere.departmentId = departmentId;
+      userRequired = true;
+    }
+
+    if (personnelType && personnelType !== "all") {
+      userWhere.personnelType = personnelType;
       userRequired = true;
     }
 
@@ -188,6 +194,7 @@ const exportToExcel = async (req, res) => {
       userId,
       facultyId,
       departmentId,
+      personnelType,
       timeSlot,
       startDate: qStartDate,
       endDate: qEndDate,
@@ -250,6 +257,11 @@ const exportToExcel = async (req, res) => {
     let userRequired = false;
     if (departmentId) {
       userWhere.departmentId = departmentId;
+      userRequired = true;
+    }
+
+    if (personnelType && personnelType !== "all") {
+      userWhere.personnelType = personnelType;
       userRequired = true;
     }
 
@@ -336,6 +348,7 @@ const exportToPDF = async (req, res) => {
       userId,
       facultyId,
       departmentId,
+      personnelType,
       timeSlot,
       startTime,
       endTime,
@@ -377,6 +390,11 @@ const exportToPDF = async (req, res) => {
     let userRequired = false;
     if (departmentId) {
       userWhere.departmentId = departmentId;
+      userRequired = true;
+    }
+
+    if (personnelType && personnelType !== "all") {
+      userWhere.personnelType = personnelType;
       userRequired = true;
     }
 

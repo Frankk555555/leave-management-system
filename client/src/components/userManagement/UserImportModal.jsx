@@ -46,6 +46,7 @@ const UserImportModal = ({ isOpen, onClose, onSuccess }) => {
     lastName: "",
     email: "",
     position: "",
+    personnelType: "",
     role: "",
     phone: "",
     startDate: "",
@@ -82,6 +83,7 @@ const UserImportModal = ({ isOpen, onClose, onSuccess }) => {
     newMapping.lastName = findMatch(["lastname", "lname", "namelast", "thai_lname", "surname"]);
     newMapping.email = findMatch(["email", "mail", "emailaddress"]);
     newMapping.position = findMatch(["position", "pos", "positiontitle", "jobtitle", "title"]);
+    newMapping.personnelType = findMatch(["personneltype", "personnel", "stafftype", "type", "employeetype"]);
     newMapping.role = findMatch(["role", "jobrole", "rolename"]);
     newMapping.phone = findMatch(["phone", "tel", "phoneno", "mobile", "telephone"]);
     newMapping.startDate = findMatch(["startdate", "start_date", "hiredate", "entrydate"]);
@@ -98,9 +100,21 @@ const UserImportModal = ({ isOpen, onClose, onSuccess }) => {
 
   const downloadTemplate = async () => {
     try {
-      await usersAPI.downloadTemplate();
+      const res = await usersAPI.downloadImportTemplate();
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "user_import_template.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("ดาวน์โหลดไฟล์ตัวอย่างสำเร็จ");
     } catch (error) {
-      console.error(error);
+      console.error("Error downloading template:", error);
       toast.error("ไม่สามารถดาวน์โหลดไฟล์ตัวอย่างได้");
     }
   };
@@ -344,6 +358,26 @@ const UserImportModal = ({ isOpen, onClose, onSuccess }) => {
             }
           >
             <option value="">-- ไม่ระบุ (ค่าเริ่มต้น: employee) --</option>
+            {sourceColumns.map((col) => (
+              <option key={col} value={col}>
+                {col}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="mapping-group">
+          <label>ประเภทบุคลากร (Personnel Type)</label>
+          <select
+            value={fieldMapping.personnelType}
+            onChange={(e) =>
+              setFieldMapping({
+                ...fieldMapping,
+                personnelType: e.target.value,
+              })
+            }
+          >
+            <option value="">-- ไม่ระบุ (ระบบจะตรวจจับอัตโนมัติ) --</option>
             {sourceColumns.map((col) => (
               <option key={col} value={col}>
                 {col}

@@ -151,6 +151,7 @@ const createUser = async (req, res) => {
       password,
       departmentId,
       position,
+      personnelType,
       role,
       supervisorId,
       governmentDivision,
@@ -212,6 +213,7 @@ const createUser = async (req, res) => {
       password,
       departmentId: safeDepartmentId,
       position,
+      personnelType: personnelType || "university_employee_academic",
       role: role || "employee",
       supervisorId: safeSupervisorId,
       governmentDivision,
@@ -237,6 +239,7 @@ const createUser = async (req, res) => {
       email: user.email,
       department: userWithBalance.department,
       position: user.position,
+      personnelType: user.personnelType,
       role: user.role,
       leaveBalances: userWithBalance.leaveBalances,
     });
@@ -268,6 +271,7 @@ const updateUser = async (req, res) => {
       email,
       departmentId,
       position,
+      personnelType,
       role,
       supervisorId,
       startDate,
@@ -289,6 +293,8 @@ const updateUser = async (req, res) => {
       departmentId:
         safeDepartmentId !== undefined ? safeDepartmentId : user.departmentId,
       position: position || user.position,
+      personnelType:
+        personnelType !== undefined ? personnelType : user.personnelType,
       role: role || user.role,
       supervisorId:
         safeSupervisorId !== undefined ? safeSupervisorId : user.supervisorId,

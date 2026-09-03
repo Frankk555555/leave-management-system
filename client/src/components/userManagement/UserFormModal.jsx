@@ -14,6 +14,7 @@ import {
 import { useDepartments } from "../../hooks/queries/useReferenceData";
 import { useCreateUser, useUpdateUser } from "../../hooks/queries/useUsers";
 import { useToast } from "../common/Toast";
+import { PERSONNEL_TYPES } from "../../constants/personnelTypes";
 
 const initialFormState = {
   employeeId: "",
@@ -23,6 +24,7 @@ const initialFormState = {
   password: "",
   departmentId: "",
   position: "",
+  personnelType: "university_employee_academic",
   role: "employee",
   supervisorId: "",
   startDate: "",
@@ -78,6 +80,8 @@ const UserFormModal = ({
         departmentId:
           editingUser.departmentId || editingUser.department?.id || "",
         position: editingUser.position || "",
+        personnelType:
+          editingUser.personnelType || "university_employee_academic",
         role: editingUser.role || "employee",
         supervisorId:
           editingUser.supervisorId || editingUser.supervisor?.id || "",
@@ -287,7 +291,7 @@ const UserFormModal = ({
 
           <div className="form-row">
             <div className="form-group">
-              <label>ตำแหน่ง</label>
+              <label>ตำแหน่ง *</label>
               <input
                 type="text"
                 name="position"
@@ -297,7 +301,25 @@ const UserFormModal = ({
               />
             </div>
             <div className="form-group">
-              <label>วันเริ่มรับราชการ</label>
+              <label>ประเภทบุคลากร (ตามระเบียบ 5 ประเภท) *</label>
+              <select
+                name="personnelType"
+                value={formData.personnelType}
+                onChange={handleChange}
+                required
+              >
+                {PERSONNEL_TYPES.map((pt) => (
+                  <option key={pt.id} value={pt.id}>
+                    {pt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>วันเริ่มรับราชการ/ทำงาน</label>
               <input
                 type="date"
                 name="startDate"
@@ -305,9 +327,6 @@ const UserFormModal = ({
                 onChange={handleChange}
               />
             </div>
-          </div>
-
-          <div className="form-row">
             <div className="form-group">
               <label>ส่วนราชการ</label>
               <input
@@ -317,15 +336,16 @@ const UserFormModal = ({
                 onChange={handleChange}
               />
             </div>
-            <div className="form-group">
-              <label>ที่ (เลขหนังสือ)</label>
-              <input
-                type="text"
-                name="documentNumber"
-                value={formData.documentNumber}
-                onChange={handleChange}
-              />
-            </div>
+          </div>
+
+          <div className="form-group">
+            <label>ที่ (เลขหนังสือ)</label>
+            <input
+              type="text"
+              name="documentNumber"
+              value={formData.documentNumber}
+              onChange={handleChange}
+            />
           </div>
 
           <div className="form-row">

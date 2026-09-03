@@ -91,6 +91,7 @@ const login = async (req, res) => {
         phone: user.phone,
         department: user.department,
         position: user.position,
+        personnelType: user.personnelType,
         role: user.role,
         leaveBalances: user.leaveBalances,
         governmentDivision: user.governmentDivision,

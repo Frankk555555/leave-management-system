@@ -77,6 +77,7 @@ CREATE TABLE users (
   last_name             VARCHAR(50),
   department_id         SMALLINT UNSIGNED,
   position              VARCHAR(80), 
+  personnel_type        VARCHAR(50)  DEFAULT 'university_employee_academic' COMMENT 'ประเภทบุคลากรตามข้อ 1.4.2',
   role                  ENUM('employee','head','admin') DEFAULT 'employee',
   supervisor_id         INT UNSIGNED COMMENT 'FK self-ref: หัวหน้าของพนักงานคนนี้',
   phone                 VARCHAR(15),
@@ -99,6 +100,7 @@ CREATE TABLE users (
   INDEX idx_email (email),
   INDEX idx_employee_id (employee_id),
   INDEX idx_role (role),
+  INDEX idx_personnel_type (personnel_type),
   INDEX idx_department_id (department_id),
   INDEX idx_supervisor_id (supervisor_id),
   INDEX idx_is_active (is_active)

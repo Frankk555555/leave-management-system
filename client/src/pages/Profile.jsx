@@ -16,7 +16,9 @@ import {
   FaUniversity,
   FaFileAlt,
   FaSitemap,
+  FaUserTag,
 } from "react-icons/fa";
+import { getPersonnelTypeLabel } from "../constants/personnelTypes";
 import SEO, { SEOConfig } from "../components/common/SEO";
 import "./Profile.css";
 
@@ -370,6 +372,13 @@ const Profile = () => {
                 <div>
                   <label>ตำแหน่ง</label>
                   <span>{user?.position || "-"}</span>
+                </div>
+              </div>
+              <div className="info-item">
+                <FaUserTag className="info-icon" />
+                <div>
+                  <label>ประเภทบุคลากร</label>
+                  <span>{getPersonnelTypeLabel(user?.personnelType)}</span>
                 </div>
               </div>
             </div>

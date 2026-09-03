@@ -36,6 +36,10 @@ import {
   FaArrowRight,
   FaTrophy,
 } from "react-icons/fa";
+import {
+  PERSONNEL_TYPES,
+  getPersonnelTypeLabel,
+} from "../constants/personnelTypes";
 import SEO, { SEOConfig } from "../components/common/SEO";
 import "./Reports.css";
 
@@ -66,6 +70,7 @@ const Reports = () => {
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedFacultyId, setSelectedFacultyId] = useState("");
   const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
+  const [selectedPersonnelType, setSelectedPersonnelType] = useState("");
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
@@ -116,6 +121,7 @@ const Reports = () => {
     selectedUserId,
     selectedFacultyId,
     selectedDepartmentId,
+    selectedPersonnelType,
   ]);
 
   const fetchFilterData = async () => {
@@ -141,6 +147,7 @@ const Reports = () => {
       userId: selectedUserId || undefined,
       facultyId: selectedFacultyId || undefined,
       departmentId: selectedDepartmentId || undefined,
+      personnelType: selectedPersonnelType || undefined,
     };
 
     if (filterType === "year") {
@@ -264,6 +271,7 @@ const Reports = () => {
     setSelectedUserId("");
     setSelectedFacultyId("");
     setSelectedDepartmentId("");
+    setSelectedPersonnelType("");
     setUserSearchQuery("");
     setStartDate("");
     setEndDate("");
@@ -396,6 +404,7 @@ const Reports = () => {
     selectedUserId ||
     selectedFacultyId ||
     selectedDepartmentId ||
+    selectedPersonnelType ||
     (filterType === "month" && month) ||
     ((filterType === "custom" || filterType === "datetime") && (startDate || endDate))
   );
@@ -744,6 +753,25 @@ const Reports = () => {
                   </select>
                 </div>
               </div>
+
+              {/* Personnel Type Dropdown */}
+              <div className="control-item">
+                <label className="control-label">ประเภทบุคลากร 5 ประเภท</label>
+                <div className="select-wrapper">
+                  <select
+                    value={selectedPersonnelType}
+                    onChange={(e) => setSelectedPersonnelType(e.target.value)}
+                    className="control-input"
+                  >
+                    <option value="">-- ทุกประเภทบุคลากร --</option>
+                    {PERSONNEL_TYPES.map((pt) => (
+                      <option key={pt.id} value={pt.id}>
+                        {pt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
 
             {/* Active Filter Chips & Summary */}
@@ -767,6 +795,12 @@ const Reports = () => {
                     <span className="filter-chip">
                       📁 {selectedDeptObj.name}
                       <button onClick={() => setSelectedDepartmentId("")}>✕</button>
+                    </span>
+                  )}
+                  {selectedPersonnelType && (
+                    <span className="filter-chip">
+                      🎖️ {getPersonnelTypeLabel(selectedPersonnelType)}
+                      <button onClick={() => setSelectedPersonnelType("")}>✕</button>
                     </span>
                   )}
                   {month && (

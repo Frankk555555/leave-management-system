@@ -150,6 +150,58 @@ const resolveSupervisor = async (value) => {
 };
 
 /**
+ * Normalize and auto-detect personnel type (5 categories from scope 1.4.2)
+ */
+const normalizePersonnelType = (raw, position = "") => {
+  const text = `${raw || ""} ${position || ""}`.toLowerCase().trim();
+  if (text.includes("ข้าราชการ")) {
+    if (
+      text.includes("สนับสนุน") ||
+      text.includes("บริหาร") ||
+      text.includes("ปฏิบัติการ")
+    ) {
+      return "civil_servant_support";
+    }
+    return "civil_servant_academic";
+  }
+  if (
+    text.includes("อาจารย์อัตราจ้าง") ||
+    text.includes("อัตราจ้าง") ||
+    text === "contract_lecturer"
+  ) {
+    return "contract_lecturer";
+  }
+  if (
+    text.includes("ลูกจ้างชั่วคราว") ||
+    text.includes("ชั่วคราว") ||
+    text === "temporary_employee"
+  ) {
+    return "temporary_employee";
+  }
+  if (
+    text.includes("พนักงานมหาวิทยาลัย") ||
+    text.includes("พนักงาน") ||
+    text.includes("univ_")
+  ) {
+    if (
+      text.includes("สนับสนุน") ||
+      text.includes("เจ้าหน้าที่") ||
+      text.includes("ปฏิบัติการ") ||
+      text === "university_employee_support"
+    ) {
+      return "university_employee_support";
+    }
+    return "university_employee_academic";
+  }
+  if (text === "civil_servant_academic") return "civil_servant_academic";
+  if (text === "civil_servant_support") return "civil_servant_support";
+  if (text === "university_employee_academic") return "university_employee_academic";
+  if (text === "university_employee_support") return "university_employee_support";
+
+  return "university_employee_academic";
+};
+
+/**
  * Create initial leave balances for a newly registered or imported user
  */
 const createLeaveBalancesForUser = async (userId) => {
@@ -347,6 +399,14 @@ const UserIngestion = {
         ? getCellValueString(row.getCell(headers["affiliation"]))
         : null;
 
+      const rawPersonnelType = headers["personneltype"]
+        ? getCellValueString(row.getCell(headers["personneltype"]))
+        : null;
+      rowData.personnelType = normalizePersonnelType(
+        rawPersonnelType,
+        rowData.position
+      );
+
       const rawDept = headers["departmentid"]
         ? row.getCell(headers["departmentid"])?.value
         : null;
@@ -428,6 +488,8 @@ const UserIngestion = {
             lastName: rowData.lastName,
             email: rowData.email,
             position: rowData.position,
+            personnelType:
+              rowData.personnelType || existingUser.personnelType,
             role: rowData.role,
             departmentId: rowData.departmentId || existingUser.departmentId,
             supervisorId: rowData.supervisorId || existingUser.supervisorId,
@@ -455,6 +517,8 @@ const UserIngestion = {
             email: rowData.email,
             password: passwordToUse,
             position: rowData.position,
+            personnelType:
+              rowData.personnelType || "university_employee_academic",
             role: rowData.role,
             departmentId: rowData.departmentId,
             supervisorId: rowData.supervisorId,
@@ -525,6 +589,13 @@ const UserIngestion = {
         rowData.position = mapping.position
           ? String(row[mapping.position] || "").trim()
           : "";
+        const rawPersonnelType = mapping.personnelType
+          ? String(row[mapping.personnelType] || "").trim()
+          : "";
+        rowData.personnelType = normalizePersonnelType(
+          rawPersonnelType,
+          rowData.position
+        );
         rowData.role = mapping.role
           ? String(row[mapping.role] || "").trim()
           : "employee";
@@ -608,6 +679,8 @@ const UserIngestion = {
             lastName: rowData.lastName,
             email: rowData.email,
             position: rowData.position,
+            personnelType:
+              rowData.personnelType || existingUser.personnelType,
             role: rowData.role,
             departmentId: rowData.departmentId || existingUser.departmentId,
             supervisorId: rowData.supervisorId || existingUser.supervisorId,
@@ -635,6 +708,8 @@ const UserIngestion = {
             email: rowData.email,
             password: passwordToUse,
             position: rowData.position,
+            personnelType:
+              rowData.personnelType || "university_employee_academic",
             role: rowData.role,
             departmentId: rowData.departmentId,
             supervisorId: rowData.supervisorId,
@@ -1023,6 +1098,14 @@ const UserIngestion = {
     });
 
     const roles = ["employee", "head", "admin"];
+    const personnelTypes = [
+      "ข้าราชการในสถาบันอุดมศึกษา (สายผู้สอน)",
+      "ข้าราชการในสถาบันอุดมศึกษา (สายสนับสนุน)",
+      "พนักงานมหาวิทยาลัยสายผู้สอน",
+      "พนักงานมหาวิทยาลัยสายสนับสนุน",
+      "อาจารย์อัตราจ้าง",
+      "ลูกจ้างชั่วคราวมหาวิทยาลัย",
+    ];
     const deptNames = departments.map((d) => d.name);
     const facultyNames = faculties.map((f) => f.name);
     const supervisorNames = supervisors.map(
@@ -1033,6 +1116,7 @@ const UserIngestion = {
     dataSheet.getColumn("B").values = ["Department", ...deptNames];
     dataSheet.getColumn("C").values = ["Supervisor", ...supervisorNames];
     dataSheet.getColumn("D").values = ["Faculty", ...facultyNames];
+    dataSheet.getColumn("E").values = ["PersonnelType", ...personnelTypes];
 
     const headers = [
       { header: "firstName(ชื่อ)", key: "firstName", width: 20 },
@@ -1040,6 +1124,7 @@ const UserIngestion = {
       { header: "email(อีเมล)", key: "email", width: 30 },
       { header: "password(รหัสผ่าน เว้นว่างได้)", key: "password", width: 15 },
       { header: "position(ตำแหน่ง)", key: "position", width: 20 },
+      { header: "personnelType(ประเภทบุคลากร)", key: "personnelType", width: 35 },
       { header: "role(บทบาท)", key: "role", width: 15 },
       { header: "facultyId(คณะ)", key: "facultyId", width: 25 },
       { header: "departmentId(สาขาวิชา/หน่วยงาน)", key: "departmentId", width: 30 },
@@ -1053,6 +1138,7 @@ const UserIngestion = {
       email: "somchai@example.com",
       password: "Password1",
       position: "อาจารย์",
+      personnelType: personnelTypes[2],
       role: "employee",
       facultyId: facultyNames[0] || "",
       departmentId: deptNames[0] || "",
@@ -1063,24 +1149,29 @@ const UserIngestion = {
       sheet.getCell(`F${rowNum}`).dataValidation = {
         type: "list",
         allowBlank: true,
+        formulae: [`DropdownData!$E$2:$E$${personnelTypes.length + 1}`],
+      };
+      sheet.getCell(`G${rowNum}`).dataValidation = {
+        type: "list",
+        allowBlank: true,
         formulae: [`DropdownData!$A$2:$A$${roles.length + 1}`],
       };
       if (facultyNames.length > 0) {
-        sheet.getCell(`G${rowNum}`).dataValidation = {
+        sheet.getCell(`H${rowNum}`).dataValidation = {
           type: "list",
           allowBlank: true,
           formulae: [`DropdownData!$D$2:$D$${facultyNames.length + 1}`],
         };
       }
       if (deptNames.length > 0) {
-        sheet.getCell(`H${rowNum}`).dataValidation = {
+        sheet.getCell(`I${rowNum}`).dataValidation = {
           type: "list",
           allowBlank: true,
           formulae: [`DropdownData!$B$2:$B$${deptNames.length + 1}`],
         };
       }
       if (supervisorNames.length > 0) {
-        sheet.getCell(`I${rowNum}`).dataValidation = {
+        sheet.getCell(`J${rowNum}`).dataValidation = {
           type: "list",
           allowBlank: true,
           formulae: [`DropdownData!$C$2:$C$${supervisorNames.length + 1}`],
@@ -1112,6 +1203,7 @@ const UserIngestion = {
         name_last: "เจริญสุข",
         email_address: "kittipong.c@bru.ac.th",
         position_title: "อาจารย์ประจำสาขาวิชาคณิตศาสตร์",
+        personnel_type: "civil_servant_academic",
         job_role: "employee",
         phone_no: "0811223344",
         division_name: "คณะวิทยาศาสตร์",
@@ -1124,6 +1216,7 @@ const UserIngestion = {
         name_last: "ศรีสวัสดิ์",
         email_address: "wannapa.s@bru.ac.th",
         position_title: "อาจารย์ประจำสาขาวิชาเทคโนโลยีสารสนเทศ",
+        personnel_type: "university_employee_academic",
         job_role: "employee",
         phone_no: "0899887766",
         division_name: "คณะวิทยาศาสตร์",
@@ -1136,6 +1229,7 @@ const UserIngestion = {
         name_last: "ยอดดี",
         email_address: "manop.y@bru.ac.th",
         position_title: "หัวหน้าภาควิชาคณิตศาสตร์",
+        personnel_type: "civil_servant_academic",
         job_role: "head",
         phone_no: "0855443322",
         division_name: "คณะวิทยาศาสตร์",
@@ -1148,6 +1242,7 @@ const UserIngestion = {
         name_last: "ใจงาม",
         email_address: "sirilak.j@bru.ac.th",
         position_title: "เจ้าหน้าที่บริหารงานทั่วไป",
+        personnel_type: "university_employee_support",
         job_role: "employee",
         phone_no: "0877665544",
         division_name: "สำนักงานอธิการบดี",
@@ -1159,7 +1254,8 @@ const UserIngestion = {
         name_first: "ดร.ณรงค์",
         name_last: "แก้วสะอาด",
         email_address: "narong.k@bru.ac.th",
-        position_title: "อาจารย์ประจำสาขาวิชาเคมี",
+        position_title: "อาจารย์อัตราจ้างสาขาวิชาเคมี",
+        personnel_type: "contract_lecturer",
         job_role: "employee",
         phone_no: "0866554433",
         division_name: "คณะวิทยาศาสตร์",
@@ -1181,6 +1277,7 @@ const UserIngestion = {
         last_name VARCHAR(50) NOT NULL,
         email VARCHAR(80) UNIQUE NOT NULL,
         position_title VARCHAR(80),
+        personnel_type VARCHAR(50) DEFAULT 'university_employee_academic',
         role_name VARCHAR(20) DEFAULT 'employee',
         phone_no VARCHAR(15),
         dept_name VARCHAR(100),
@@ -1205,6 +1302,7 @@ const UserIngestion = {
           "เจริญสุข",
           "kittipong.c@bru.ac.th",
           "อาจารย์ประจำสาขาวิชาวิทยาการคอมพิวเตอร์",
+          "civil_servant_academic",
           "employee",
           "0811223344",
           "สาขาวิชาวิทยาการคอมพิวเตอร์",
@@ -1217,6 +1315,7 @@ const UserIngestion = {
           "ศรีสวัสดิ์",
           "wannapa.s@bru.ac.th",
           "อาจารย์ประจำสาขาวิชาเทคโนโลยีสารสนเทศ",
+          "university_employee_academic",
           "employee",
           "0899887766",
           "สาขาวิชาเทคโนโลยีสารสนเทศ",
@@ -1229,6 +1328,7 @@ const UserIngestion = {
           "ยอดดี",
           "manop.y@bru.ac.th",
           "หัวหน้าภาควิชาคณิตศาสตร์",
+          "civil_servant_academic",
           "head",
           "0855443322",
           "สาขาวิชาคณิตศาสตร์",
@@ -1241,6 +1341,7 @@ const UserIngestion = {
           "ใจงาม",
           "sirilak.j@bru.ac.th",
           "เจ้าหน้าที่บริหารงานทั่วไป",
+          "university_employee_support",
           "employee",
           "0877665544",
           "สำนักงานอธิการบดี",
@@ -1252,7 +1353,8 @@ const UserIngestion = {
           "ดร.ณรงค์",
           "แก้วสะอาด",
           "narong.k@bru.ac.th",
-          "อาจารย์ประจำสาขาวิชาเคมี",
+          "อาจารย์อัตราจ้างสาขาวิชาเคมี",
+          "contract_lecturer",
           "employee",
           "0866554433",
           "สาขาวิชาเคมี",
@@ -1264,8 +1366,8 @@ const UserIngestion = {
       for (const user of mockUsers) {
         await sequelize.query(
           `INSERT INTO mock_university_personnel 
-          (emp_id, first_name, last_name, email, position_title, role_name, phone_no, dept_name, faculty_name, start_date) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (emp_id, first_name, last_name, email, position_title, personnel_type, role_name, phone_no, dept_name, faculty_name, start_date) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           { replacements: user }
         );
       }
