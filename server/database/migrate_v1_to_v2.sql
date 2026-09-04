@@ -83,6 +83,23 @@ SET @sql = IF(@idx_exists = 0,
   'SELECT "idx_is_active already exists"');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
+-- เพิ่ม personnel_type ถ้ายังไม่มี
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'personnel_type');
+SET @sql = IF(@col_exists = 0,
+  'ALTER TABLE users ADD COLUMN personnel_type VARCHAR(50) DEFAULT "university_employee_academic" COMMENT "ประเภทบุคลากรตามข้อ 1.4.2"',
+  'SELECT "personnel_type already exists in users"');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Index สำหรับ personnel_type
+SET @idx_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND INDEX_NAME = 'idx_personnel_type');
+SET @sql = IF(@idx_exists = 0,
+  'ALTER TABLE users ADD INDEX idx_personnel_type (personnel_type)',
+  'SELECT "idx_personnel_type already exists"');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+
 -- ================================================================
 -- STEP 4: สร้าง/ปรับ leave_types
 -- ================================================================

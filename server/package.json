@@ -7,6 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "clear:leaves": "node scripts/clear-leaves.js",
+    "migrate": "node scripts/run-migration.js",
     "test": "jest --watchAll=false",
     "test:watch": "jest --watchAll"
   },

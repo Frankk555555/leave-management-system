@@ -39,14 +39,64 @@ const sequelize = new Sequelize(
   }
 );
 
-// Test connection
+// Helper to safely add column if missing
+const ensureColumnExists = async (tableName, columnName, definition) => {
+  try {
+    const [results] = await sequelize.query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '${tableName}' AND COLUMN_NAME = '${columnName}'`
+    );
+    if (results.length === 0) {
+      await sequelize.query(
+        `ALTER TABLE \`${tableName}\` ADD COLUMN \`${columnName}\` ${definition}`
+      );
+      console.log(`✅ [Auto-Migration] Added missing column '${columnName}' to '${tableName}' table.`);
+    }
+  } catch (err) {
+    // Ignore error if table does not exist yet
+  }
+};
+
+// Helper to safely add index if missing
+const ensureIndexExists = async (tableName, indexName, definition) => {
+  try {
+    const [results] = await sequelize.query(
+      `SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '${tableName}' AND INDEX_NAME = '${indexName}'`
+    );
+    if (results.length === 0) {
+      await sequelize.query(
+        `ALTER TABLE \`${tableName}\` ADD INDEX \`${indexName}\` ${definition}`
+      );
+      console.log(`✅ [Auto-Migration] Added missing index '${indexName}' to '${tableName}' table.`);
+    }
+  } catch (err) {
+    // Ignore error
+  }
+};
+
+// Test connection and auto-sync essential schema
 const testConnection = async () => {
   try {
     await sequelize.authenticate();
     console.log("✅ MySQL connection successfully");
 
-    // Ensure profile_image and signature_image columns are VARCHAR(500) to support full Cloudinary URLs
+    // Ensure critical columns and indexes exist in production database
     try {
+      // Users table additions
+      await ensureColumnExists("users", "personnel_type", "VARCHAR(50) DEFAULT 'university_employee_academic' COMMENT 'ประเภทบุคลากรตามข้อ 1.4.2'");
+      await ensureIndexExists("users", "idx_personnel_type", "(personnel_type)");
+      await ensureColumnExists("users", "signature_image", "VARCHAR(500) NULL COMMENT 'Path to signature image file'");
+      await ensureColumnExists("users", "profile_image", "VARCHAR(500) NULL COMMENT 'Path to profile image file'");
+      await ensureColumnExists("users", "start_date", "DATE NULL COMMENT 'วันที่เริ่มรับราชการ'");
+      await ensureColumnExists("users", "government_division", "VARCHAR(100) NULL COMMENT 'ส่วนราชการ'");
+      await ensureColumnExists("users", "document_number", "VARCHAR(100) NULL COMMENT 'ที่ (เลขหนังสือ เช่น อว 0624.2/)'");
+      await ensureColumnExists("users", "unit", "VARCHAR(100) NULL COMMENT 'หน่วยงาน'");
+      await ensureColumnExists("users", "affiliation", "VARCHAR(100) NULL COMMENT 'สังกัด (คณะ)'");
+      await ensureColumnExists("users", "reset_password_token", "VARCHAR(255) NULL COMMENT 'Token สำหรับการตั้งรหัสผ่านใหม่'");
+      await ensureColumnExists("users", "reset_password_expires", "DATETIME NULL COMMENT 'เวลาหมดอายุของ Token รีเซ็ตรหัสผ่าน'");
+      await ensureColumnExists("users", "is_active", "TINYINT(1) DEFAULT 1 COMMENT 'Soft delete flag'");
+      await ensureIndexExists("users", "idx_is_active", "(is_active)");
+
+      // Expand image URL columns if existing
       await sequelize.query(
         "ALTER TABLE users MODIFY profile_image VARCHAR(500), MODIFY signature_image VARCHAR(500);"
       );
@@ -60,3 +110,4 @@ const testConnection = async () => {
 };
 
 module.exports = { sequelize, testConnection };
+
