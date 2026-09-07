@@ -23,7 +23,7 @@
     },
     {
       "parameters": {
-        "url": "https://leave-management-system-xcf6.onrender.com/api/webhooks/weekly-report?all=true",
+        "url": "https://leave-management-system-xcf6.onrender.com/api/webhooks/weekly-report",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

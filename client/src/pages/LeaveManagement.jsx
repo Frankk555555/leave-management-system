@@ -15,6 +15,7 @@ import {
   FaFilter,
   FaTimes,
   FaEye,
+  FaSpinner,
 } from "react-icons/fa";
 import SEO, { SEOConfig } from "../components/common/SEO";
 import useCollectionQuery from "../hooks/useCollectionQuery";
@@ -27,6 +28,7 @@ const LeaveManagement = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState(null);
+  const [previewingId, setPreviewingId] = useState(null);
   const [confirmNote, setConfirmNote] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -98,60 +100,68 @@ const LeaveManagement = () => {
   };
 
   const handlePreview = async (request) => {
-    // คำนวณสถิติการลาก่อนหน้าของ user คนนี้ (confirmed leaves only)
-    const userConfirmedRequests = requests.filter(
-      (r) =>
-        r.status === "confirmed" &&
-        r.id !== request.id &&
-        r.userId === request.userId,
-    );
+    try {
+      setPreviewingId(request.id);
+      // คำนวณสถิติการลาก่อนหน้าของ user คนนี้ (confirmed leaves only)
+      const userConfirmedRequests = requests.filter(
+        (r) =>
+          r.status === "confirmed" &&
+          r.id !== request.id &&
+          r.userId === request.userId,
+      );
 
-    const leaveStats = {
-      sick: { used: 0 },
-      personal: { used: 0 },
-      vacation: { used: 0 },
-      maternity: { used: 0 },
-      paternity: { used: 0 },
-      childcare: { used: 0 },
-      ordination: { used: 0 },
-      military: { used: 0 },
-    };
+      const leaveStats = {
+        sick: { used: 0 },
+        personal: { used: 0 },
+        vacation: { used: 0 },
+        maternity: { used: 0 },
+        paternity: { used: 0 },
+        childcare: { used: 0 },
+        ordination: { used: 0 },
+        military: { used: 0 },
+      };
 
-    // รวมจำนวนวันลาที่ผ่านมา
-    userConfirmedRequests.forEach((r) => {
-      const code = getLeaveTypeCode(r.leaveType);
-      if (leaveStats[code]) {
-        leaveStats[code].used += parseFloat(r.totalDays) || 0;
-      }
-    });
+      // รวมจำนวนวันลาที่ผ่านมา
+      userConfirmedRequests.forEach((r) => {
+        const code = getLeaveTypeCode(r.leaveType);
+        if (leaveStats[code]) {
+          leaveStats[code].used += parseFloat(r.totalDays) || 0;
+        }
+      });
 
-    // Prepare leave data
-    const leaveData = {
-      leaveType: getLeaveTypeCode(request.leaveType),
-      startDate: request.startDate,
-      endDate: request.endDate,
-      totalDays: request.totalDays,
-      reason: request.reason || "",
-      contactAddress: request.contactAddress || "",
-      contactPhone: request.contactPhone || "",
-      leaveStats: leaveStats,
-      createdAt: request.createdAt,
-    };
+      // Prepare leave data
+      const leaveData = {
+        leaveType: getLeaveTypeCode(request.leaveType),
+        startDate: request.startDate,
+        endDate: request.endDate,
+        totalDays: request.totalDays,
+        reason: request.reason || "",
+        contactAddress: request.contactAddress || "",
+        contactPhone: request.contactPhone || "",
+        leaveStats: leaveStats,
+        createdAt: request.createdAt,
+      };
 
-    // Prepare user data
-    const userData = {
-      firstName: request.user?.firstName || "",
-      lastName: request.user?.lastName || "",
-      position: request.user?.position || "",
-      department: request.user?.department || "",
-      unit: request.user?.unit || "",
-      affiliation: request.user?.affiliation || "",
-      phone: request.user?.phone || "",
-      documentNumber: request.user?.documentNumber || "",
-      signatureImage: request.user?.signatureImage || "",
-    };
+      // Prepare user data
+      const userData = {
+        firstName: request.user?.firstName || "",
+        lastName: request.user?.lastName || "",
+        position: request.user?.position || "",
+        department: request.user?.department || "",
+        unit: request.user?.unit || "",
+        affiliation: request.user?.affiliation || "",
+        phone: request.user?.phone || "",
+        documentNumber: request.user?.documentNumber || "",
+        signatureImage: request.user?.signatureImage || "",
+      };
 
-    await previewLeavePDF(leaveData, userData);
+      await previewLeavePDF(leaveData, userData);
+    } catch (error) {
+      console.error("Preview error:", error);
+      toast.error("ไม่สามารถสร้างตัวอย่างใบลาได้");
+    } finally {
+      setPreviewingId(null);
+    }
   };
 
   // getLeaveTypeName imported from utils/leaveTypeUtils
@@ -314,11 +324,17 @@ const LeaveManagement = () => {
                     <td>
                       <div className="action-buttons">
                         <button
-                          className="preview-btn"
+                          className={`preview-btn ${previewingId === request.id ? "loading" : ""}`}
                           onClick={() => handlePreview(request)}
+                          disabled={previewingId === request.id}
                           title="ดูตัวอย่างใบลา"
+                          aria-label="ดูตัวอย่างใบลา"
                         >
-                          <FaEye />
+                          {previewingId === request.id ? (
+                            <FaSpinner className="btn-spinner" />
+                          ) : (
+                            <FaEye className="preview-icon" />
+                          )}
                         </button>
                         {request.status === "approved" ? (
                           <button
@@ -395,11 +411,21 @@ const LeaveManagement = () => {
 
                   <div className="card-footer">
                     <button
-                      className="preview-btn-mobile"
+                      className={`preview-btn-mobile ${previewingId === request.id ? "loading" : ""}`}
                       onClick={() => handlePreview(request)}
+                      disabled={previewingId === request.id}
                       title="ดูตัวอย่างใบลา"
+                      aria-label="ดูตัวอย่างใบลา"
                     >
-                      <FaEye /> ดูตัวอย่าง
+                      {previewingId === request.id ? (
+                        <>
+                          <FaSpinner className="btn-spinner" /> กำลังเปิด...
+                        </>
+                      ) : (
+                        <>
+                          <FaEye className="preview-icon" /> ดูตัวอย่าง
+                        </>
+                      )}
                     </button>
                     {request.status === "approved" ? (
                       <button
