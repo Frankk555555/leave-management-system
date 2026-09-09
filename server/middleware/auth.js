@@ -70,11 +70,16 @@ const admin = (req, res, next) => {
 };
 
 const supervisor = (req, res, next) => {
-  if (req.user && (req.user.role === "head" || req.user.role === "admin")) {
+  if (
+    req.user &&
+    ["head", "dean", "vp", "admin"].includes(req.user.role)
+  ) {
     next();
   } else {
-    res.status(403).json({ message: "Not authorized as supervisor" });
+    res.status(403).json({ message: "ไม่มีสิทธิ์เข้าถึงส่วนการอนุมัติคำขอลา" });
   }
 };
 
-module.exports = { protect, admin, supervisor };
+const approver = supervisor;
+
+module.exports = { protect, admin, supervisor, approver };

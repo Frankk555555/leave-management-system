@@ -3,22 +3,6 @@
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "leave-created",
-        "options": {}
-      },
-      "id": "0a3fa68b-b204-4756-ace6-f9d0f1143a59",
-      "name": "Webhook (New Leave)",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1.1,
-      "position": [
-        0,
-        0
-      ],
-      "webhookId": "leave-created-webhook-id"
-    },
-    {
-      "parameters": {
         "method": "POST",
         "url": "https://api.brevo.com/v3/smtp/email",
         "authentication": "genericCredentialType",
@@ -28,20 +12,36 @@
         "jsonBody": "={\n  \"sender\": {\n    \"name\": \"ระบบจัดการวันลา\",\n    \"email\": \"leavemanagementbru@gmail.com\"\n  },\n  \"to\": [\n    {\n      \"email\": \"leavemanagementbru@gmail.com\"\n    }\n  ],\n  \"subject\": \"[คำขอลาใหม่] {{ $json.body.user.firstName }} {{ $json.body.user.lastName }} - {{ $json.body.leaveType.name }}\",\n  \"htmlContent\": \"<div style=\\\"font-family: sans-serif; max-width: 600px; margin: 0 auto;\\\"><div style=\\\"background: linear-gradient(135deg, #667eea, #764ba2); padding: 20px; border-radius: 10px 10px 0 0;\\\"><h2 style=\\\"color: white; margin: 0;\\\">📝 คำขอลาใหม่</h2></div><div style=\\\"background: white; padding: 20px; border: 1px solid #e2e8f0;\\\"><p><strong>ชื่อ-นามสกุล:</strong> {{ $json.body.user.firstName }} {{ $json.body.user.lastName }}</p><p><strong>สาขา:</strong> {{ $json.body.user.department }}</p><p><strong>ประเภทการลา:</strong> {{ $json.body.leaveType.name }}</p><p><strong>จำนวนวัน:</strong> {{ $json.body.leaveRequest.totalDays }} วัน</p><p><strong>เหตุผล:</strong> {{ $json.body.leaveRequest.reason }}</p><div style=\\\"margin-top: 20px;\\\"><a href=\\\"{{ $json.body.frontendUrl }}/approvals\\\" style=\\\"background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;\\\">ดูรายละเอียดและอนุมัติ</a></div></div></div>\"\n}\n",
         "options": {}
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
-      "position": [
-        256,
-        0
-      ],
-      "id": "039f27a0-23b7-439c-9021-6917637d8a2e",
+      "id": "21489f09-b413-4d5b-b11f-9e255dd320a3",
       "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        160,
+        -40
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "itrmEv8coiKefDEK",
           "name": "Header Auth account"
         }
       }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "leave-created",
+        "options": {}
+      },
+      "id": "60054d0b-b1a5-4fdc-946c-fdb8d8a0ea7a",
+      "name": "Webhook (New Leave)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -60,
+        -40
+      ],
+      "webhookId": "leave-created-webhook-id"
     }
   ],
   "pinData": {},
@@ -68,12 +68,11 @@
     "timezone": "Asia/Bangkok",
     "saveExecutionProgress": true
   },
-  "versionId": "8d786335-37a3-4457-ac71-0ef1ceaf97b4",
+  "versionId": "5bc0c316-1865-46c2-b2b4-7f25c9b38b1a",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "3f7fbd55c515a7e4ec9d5459785ef3e1a83a54108f3556656a50faa2875ca864"
+    "instanceId": "094a5d408ebf521c9b3b5c8c70ced99fe2db63490427fb070a8fc62655a9b8f1"
   },
-  "nodeGroups": [],
   "id": "4XQ6gJPBm0jA72N3",
   "tags": []
 }

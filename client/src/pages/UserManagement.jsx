@@ -74,6 +74,10 @@ const getRoleBadge = (role) => {
   switch (role) {
     case "admin":
       return <span className="role-badge admin">ผู้ดูแลระบบ</span>;
+    case "vp":
+      return <span className="role-badge vp">รองอธิการบดีฯ</span>;
+    case "dean":
+      return <span className="role-badge dean">คณบดี/ผอ.</span>;
     case "head":
       return <span className="role-badge head">หัวหน้างาน</span>;
     default:
@@ -263,6 +267,8 @@ const UserManagement = () => {
             >
               <option value="all">ทุกบทบาท</option>
               <option value="admin">ผู้ดูแลระบบ (Admin)</option>
+              <option value="vp">รองอธิการบดีฯ (VP)</option>
+              <option value="dean">คณบดี/ผอ.สำนัก (Dean)</option>
               <option value="head">หัวหน้างาน (Head)</option>
               <option value="employee">บุคลากร (Employee)</option>
             </select>

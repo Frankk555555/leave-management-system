@@ -55,7 +55,7 @@ const User = sequelize.define(
       comment: "ประเภทบุคลากร 5 ประเภทตามระเบียบมหาวิทยาลัย",
     },
     role: {
-      type: DataTypes.ENUM("employee", "head", "admin"),
+      type: DataTypes.ENUM("employee", "head", "dean", "vp", "admin"),
       defaultValue: "employee",
     },
     supervisorId: {

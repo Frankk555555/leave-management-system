@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import NotificationBell from "./NotificationBell";
+import config from "../../config";
 import "./Sidebar.css";
 
 // React Icons
@@ -32,6 +33,26 @@ const Sidebar = ({ isOpen, onClose }) => {
     logout();
     navigate("/login");
     if (onClose) onClose();
+  };
+
+  const getUserDisplayTitle = () => {
+    if (!user) return "";
+    if (user.role === "admin") return "ผู้ดูแลระบบ";
+    if (user.role === "vp") return user.position || "รองอธิการบดีฯ";
+    if (user.role === "dean") return user.position || "คณบดี / ผอ.สำนัก";
+    if (user.role === "supervisor" || user.role === "head")
+      return user.position || "หัวหน้างาน";
+    return user.position || "บุคลากร";
+  };
+
+  const getAvatarUrl = () => {
+    if (!user?.profileImage) return null;
+    if (user.profileImage.startsWith("http://") || user.profileImage.startsWith("https://")) {
+      return user.profileImage;
+    }
+    let normalized = user.profileImage.replace(/\\/g, "/");
+    if (!normalized.startsWith("/")) normalized = "/" + normalized;
+    return `${config.API_URL}${normalized}`;
   };
 
   const toggleAdminDropdown = (e) => {
@@ -230,6 +251,18 @@ const Sidebar = ({ isOpen, onClose }) => {
                 <FaClipboardList className="sidebar-icon" /> <span>ประวัติการลา</span>
               </NavLink>
 
+              {isSupervisor && (
+                <NavLink
+                  to="/approvals"
+                  className={({ isActive }) =>
+                    isActive ? "sidebar-link active" : "sidebar-link"
+                  }
+                  onClick={onClose}
+                >
+                  <FaClipboardCheck className="sidebar-icon" /> <span>อนุมัติการลา</span>
+                </NavLink>
+              )}
+
               <NavLink
                 to="/calendar"
                 className={({ isActive }) =>
@@ -260,18 +293,6 @@ const Sidebar = ({ isOpen, onClose }) => {
                 <FaFileAlt className="sidebar-icon" /> <span>ดาวน์โหลดแบบฟอร์ม</span>
               </NavLink>
 
-              {isSupervisor && (
-                <NavLink
-                  to="/approvals"
-                  className={({ isActive }) =>
-                    isActive ? "sidebar-link active" : "sidebar-link"
-                  }
-                  onClick={onClose}
-                >
-                  <FaClipboardCheck className="sidebar-icon" /> <span>อนุมัติการลา</span>
-                </NavLink>
-              )}
-
               <NavLink
                 to="/regulations"
                 className={({ isActive }) =>
@@ -289,19 +310,23 @@ const Sidebar = ({ isOpen, onClose }) => {
         <div className="sidebar-footer">
           <div className="sidebar-user-row">
             <NavLink to="/profile" className="sidebar-profile-link" onClick={onClose}>
-              <div className="user-avatar">
-                <FaUser />
+              <div className="user-avatar" style={{ overflow: "hidden" }}>
+                {getAvatarUrl() ? (
+                  <img
+                    src={getAvatarUrl()}
+                    alt={user?.firstName || "ผู้ใช้งาน"}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  <FaUser />
+                )}
               </div>
               <div className="user-metadata">
                 <span className="user-display-name">
                   {user?.firstName} {user?.lastName}
                 </span>
-                <span className="user-display-role">
-                  {user?.role === "admin"
-                    ? "ผู้ดูแลระบบ"
-                    : user?.role === "supervisor" || user?.role === "head"
-                      ? "หัวหน้างาน"
-                      : "บุคลากร"}
+                <span className="user-display-role" title={getUserDisplayTitle()}>
+                  {getUserDisplayTitle()}
                 </span>
               </div>
             </NavLink>

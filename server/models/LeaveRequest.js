@@ -64,6 +64,8 @@ const LeaveRequest = sequelize.define(
     status: {
       type: DataTypes.ENUM(
         "pending",
+        "pending_dean",
+        "pending_vp",
         "approved",
         "rejected",
         "confirmed",
@@ -71,6 +73,22 @@ const LeaveRequest = sequelize.define(
       ),
       defaultValue: "pending",
     },
+    // Level 1: หัวหน้างาน
+    headComment: {
+      type: DataTypes.STRING(500),
+      field: "head_comment",
+      comment: "ความเห็นของหัวหน้าสำนักงาน/หัวหน้าภาค/หัวหน้าสาขาวิชา/หัวหน้างาน",
+    },
+    headApprovedBy: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      field: "head_approved_by",
+      comment: "FK: ผู้ให้ความเห็น (head)",
+    },
+    headApprovedAt: {
+      type: DataTypes.DATE,
+      field: "head_approved_at",
+    },
+    // Backward compatibility for approvedBy / approvedAt
     approvedBy: {
       type: DataTypes.INTEGER.UNSIGNED,
       field: "approved_by",
@@ -79,6 +97,41 @@ const LeaveRequest = sequelize.define(
     approvedAt: {
       type: DataTypes.DATE,
       field: "approved_at",
+    },
+    // Level 2: คณบดี / ผอ.สำนัก / ผอ.สถาบัน
+    deanComment: {
+      type: DataTypes.STRING(500),
+      field: "dean_comment",
+      comment: "ความเห็นของคณบดี/ผอ.สำนัก/ผอ.สถาบัน",
+    },
+    deanApprovedBy: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      field: "dean_approved_by",
+      comment: "FK: ผู้ให้ความเห็น (dean)",
+    },
+    deanApprovedAt: {
+      type: DataTypes.DATE,
+      field: "dean_approved_at",
+    },
+    // Level 3: คำสั่งรองอธิการบดีฝ่ายบริหารงานบุคคลและเทคโนโลยีสารสนเทศ
+    vpDecision: {
+      type: DataTypes.ENUM("allow", "disallow"),
+      field: "vp_decision",
+      comment: "คำสั่งรองอธิการบดีฯ: allow=อนุญาต, disallow=ไม่อนุญาต",
+    },
+    vpComment: {
+      type: DataTypes.STRING(500),
+      field: "vp_comment",
+      comment: "คำสั่งหรือความเห็นเพิ่มเติมของรองอธิการบดีฯ",
+    },
+    vpApprovedBy: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      field: "vp_approved_by",
+      comment: "FK: ผู้ลงนามคำสั่ง (vp)",
+    },
+    vpApprovedAt: {
+      type: DataTypes.DATE,
+      field: "vp_approved_at",
     },
     rejectionReason: {
       type: DataTypes.STRING(500),

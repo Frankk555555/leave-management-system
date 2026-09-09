@@ -38,6 +38,9 @@ const createLeaveRequest = async (req, res) => {
   }
 };
 
+// Standard approver attributes to include
+const approverAttributes = ["id", "firstName", "lastName", "position", "signatureImage"];
+
 // @desc    Get my leave requests
 // @route   GET /api/leave-requests
 // @access  Private
@@ -49,12 +52,57 @@ const getMyLeaveRequests = async (req, res) => {
         {
           model: User,
           as: "approver",
-          attributes: ["id", "firstName", "lastName"],
+          attributes: approverAttributes,
+        },
+        {
+          model: User,
+          as: "headApprover",
+          attributes: approverAttributes,
+        },
+        {
+          model: User,
+          as: "deanApprover",
+          attributes: approverAttributes,
+        },
+        {
+          model: User,
+          as: "vpApprover",
+          attributes: approverAttributes,
+        },
+        {
+          model: User,
+          as: "confirmer",
+          attributes: approverAttributes,
         },
         {
           model: User,
           as: "user",
-          attributes: ["id", "firstName", "lastName", "signatureImage"],
+          attributes: [
+            "id",
+            "employeeId",
+            "firstName",
+            "lastName",
+            "position",
+            "unit",
+            "affiliation",
+            "documentNumber",
+            "phone",
+            "signatureImage",
+          ],
+          include: [
+            {
+              model: Department,
+              as: "department",
+              attributes: ["id", "name"],
+              include: [
+                {
+                  model: Faculty,
+                  as: "faculty",
+                  attributes: ["id", "name"],
+                },
+              ],
+            },
+          ],
         },
         { model: LeaveType, as: "leaveType" },
         { model: LeaveAttachment, as: "attachments" },
@@ -112,7 +160,27 @@ const getAllLeaveRequests = async (req, res) => {
         {
           model: User,
           as: "approver",
-          attributes: ["id", "firstName", "lastName"],
+          attributes: approverAttributes,
+        },
+        {
+          model: User,
+          as: "headApprover",
+          attributes: approverAttributes,
+        },
+        {
+          model: User,
+          as: "deanApprover",
+          attributes: approverAttributes,
+        },
+        {
+          model: User,
+          as: "vpApprover",
+          attributes: approverAttributes,
+        },
+        {
+          model: User,
+          as: "confirmer",
+          attributes: approverAttributes,
         },
         { model: LeaveType, as: "leaveType" },
       ],
@@ -155,14 +223,41 @@ const getLeaveRequestById = async (req, res) => {
             {
               model: Department,
               as: "department",
-              attributes: ["id", "name"],
+              attributes: ["id", "name", "facultyId"],
+              include: [
+                {
+                  model: Faculty,
+                  as: "faculty",
+                  attributes: ["id", "name"],
+                },
+              ],
             },
           ],
         },
         {
           model: User,
           as: "approver",
-          attributes: ["id", "firstName", "lastName"],
+          attributes: approverAttributes,
+        },
+        {
+          model: User,
+          as: "headApprover",
+          attributes: approverAttributes,
+        },
+        {
+          model: User,
+          as: "deanApprover",
+          attributes: approverAttributes,
+        },
+        {
+          model: User,
+          as: "vpApprover",
+          attributes: approverAttributes,
+        },
+        {
+          model: User,
+          as: "confirmer",
+          attributes: approverAttributes,
         },
         { model: LeaveType, as: "leaveType" },
         { model: LeaveAttachment, as: "attachments" },
@@ -173,7 +268,7 @@ const getLeaveRequestById = async (req, res) => {
             {
               model: User,
               as: "actor",
-              attributes: ["id", "firstName", "lastName"],
+              attributes: ["id", "firstName", "lastName", "role"],
             },
           ],
           order: [["createdAt", "ASC"]],
@@ -188,6 +283,8 @@ const getLeaveRequestById = async (req, res) => {
     // IDOR Check
     const isOwner = leaveRequest.userId === req.user.id;
     const isAdmin = req.user.role === "admin";
+    const isVP = req.user.role === "vp";
+    const isDean = req.user.role === "dean";
 
     const isHeadOfSameDepartment =
       req.user.role === "head" &&
@@ -195,7 +292,7 @@ const getLeaveRequestById = async (req, res) => {
       leaveRequest.user.department &&
       leaveRequest.user.department.id === req.user.departmentId;
 
-    if (!isOwner && !isAdmin && !isHeadOfSameDepartment) {
+    if (!isOwner && !isAdmin && !isVP && !isDean && !isHeadOfSameDepartment) {
       return res.status(403).json({ message: "ไม่มีสิทธิ์เข้าถึงใบลานี้" });
     }
 
@@ -355,25 +452,40 @@ const confirmLeaveRequest = async (req, res) => {
   }
 };
 
-// @desc    Get pending leave requests (for department heads)
+// @desc    Get pending leave requests (for approvers: head, dean, vp, admin)
 // @route   GET /api/leave-requests/pending
 // @access  Private/Supervisor
 const getPendingLeaveRequests = async (req, res) => {
   try {
-    const userDeptId = req.user.departmentId;
+    const role = req.user.role;
+    let whereClause = {};
     let userWhere = {};
 
-    if (req.user.role !== "admin") {
+    if (role === "head") {
+      whereClause.status = "pending";
+      const userDeptId = req.user.departmentId;
       if (!userDeptId) {
         return res.status(400).json({
           message: "ผู้ใช้ไม่มีสังกัดหน่วยงาน ไม่สามารถอนุมัติใบลาได้",
         });
       }
       userWhere.departmentId = userDeptId;
+    } else if (role === "dean") {
+      whereClause.status = "pending_dean";
+    } else if (role === "vp") {
+      whereClause.status = "pending_vp";
+    } else if (role === "admin") {
+      if (req.query.status) {
+        whereClause.status = req.query.status;
+      } else {
+        whereClause.status = {
+          [Op.in]: ["pending", "pending_dean", "pending_vp"],
+        };
+      }
     }
 
     const leaveRequests = await LeaveRequest.findAll({
-      where: { status: "pending" },
+      where: whereClause,
       include: [
         {
           model: User,
@@ -388,17 +500,52 @@ const getPendingLeaveRequests = async (req, res) => {
             "profileImage",
             "departmentId",
             "signatureImage",
+            "documentNumber",
+            "phone",
           ],
           include: [
             {
               model: Department,
               as: "department",
-              attributes: ["id", "name"],
+              attributes: ["id", "name", "facultyId"],
+              include: [
+                {
+                  model: Faculty,
+                  as: "faculty",
+                  attributes: ["id", "name"],
+                },
+              ],
             },
           ],
         },
+        {
+          model: User,
+          as: "headApprover",
+          attributes: approverAttributes,
+        },
+        {
+          model: User,
+          as: "deanApprover",
+          attributes: approverAttributes,
+        },
+        {
+          model: User,
+          as: "vpApprover",
+          attributes: approverAttributes,
+        },
         { model: LeaveType, as: "leaveType" },
         { model: LeaveAttachment, as: "attachments" },
+        {
+          model: LeaveHistory,
+          as: "history",
+          include: [
+            {
+              model: User,
+              as: "actor",
+              attributes: ["id", "firstName", "lastName", "role"],
+            },
+          ],
+        },
       ],
       order: [["createdAt", "DESC"]],
     });
@@ -412,7 +559,7 @@ const getPendingLeaveRequests = async (req, res) => {
   }
 };
 
-// @desc    Approve leave request (department head)
+// @desc    Approve leave request (department head, dean, vp)
 // @route   PUT /api/leave-requests/:id/approve
 // @access  Private/Supervisor
 const approveLeaveRequest = async (req, res) => {
@@ -421,7 +568,11 @@ const approveLeaveRequest = async (req, res) => {
       req.params.id,
       "approve",
       req.user,
-      { note: req.body.note }
+      {
+        note: req.body.note || req.body.comment,
+        comment: req.body.comment || req.body.note,
+        decision: req.body.decision,
+      }
     );
     res.json({ message: "อนุมัติคำขอลาเรียบร้อยแล้ว", leaveRequest });
   } catch (error) {
@@ -436,7 +587,7 @@ const approveLeaveRequest = async (req, res) => {
   }
 };
 
-// @desc    Reject leave request (department head)
+// @desc    Reject leave request (department head, dean, vp)
 // @route   PUT /api/leave-requests/:id/reject
 // @access  Private/Supervisor
 const rejectLeaveRequest = async (req, res) => {
@@ -445,7 +596,7 @@ const rejectLeaveRequest = async (req, res) => {
       req.params.id,
       "reject",
       req.user,
-      { reason: req.body.reason }
+      { reason: req.body.reason || req.body.note }
     );
     res.json({ message: "ปฏิเสธคำขอลาเรียบร้อยแล้ว", leaveRequest });
   } catch (error) {

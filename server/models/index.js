@@ -102,7 +102,7 @@ LeaveType.hasMany(LeaveRequest, {
   as: "leaveRequests",
 });
 
-// LeaveRequest belongs to Approver (User)
+// LeaveRequest belongs to Approver (User) - Backward compatibility
 LeaveRequest.belongsTo(User, {
   foreignKey: "approvedBy",
   as: "approver",
@@ -111,6 +111,39 @@ LeaveRequest.belongsTo(User, {
 User.hasMany(LeaveRequest, {
   foreignKey: "approvedBy",
   as: "approvedRequests",
+});
+
+// LeaveRequest belongs to Head Approver (Level 1)
+LeaveRequest.belongsTo(User, {
+  foreignKey: "headApprovedBy",
+  as: "headApprover",
+});
+
+User.hasMany(LeaveRequest, {
+  foreignKey: "headApprovedBy",
+  as: "headApprovedRequests",
+});
+
+// LeaveRequest belongs to Dean Approver (Level 2)
+LeaveRequest.belongsTo(User, {
+  foreignKey: "deanApprovedBy",
+  as: "deanApprover",
+});
+
+User.hasMany(LeaveRequest, {
+  foreignKey: "deanApprovedBy",
+  as: "deanApprovedRequests",
+});
+
+// LeaveRequest belongs to VP Approver (Level 3)
+LeaveRequest.belongsTo(User, {
+  foreignKey: "vpApprovedBy",
+  as: "vpApprover",
+});
+
+User.hasMany(LeaveRequest, {
+  foreignKey: "vpApprovedBy",
+  as: "vpApprovedRequests",
 });
 
 // LeaveRequest belongs to Confirmer (User)

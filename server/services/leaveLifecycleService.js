@@ -49,12 +49,16 @@ const findLeaveRequestWithDetails = async (id, transaction = null) => {
           "position",
           "departmentId",
           "signatureImage",
+          "phone",
+          "documentNumber",
+          "unit",
+          "affiliation",
         ],
         include: [
           {
             model: Department,
             as: "department",
-            attributes: ["id", "name"],
+            attributes: ["id", "name", "facultyId"],
             include: [
               {
                 model: Faculty,
@@ -68,10 +72,41 @@ const findLeaveRequestWithDetails = async (id, transaction = null) => {
       {
         model: User,
         as: "approver",
-        attributes: ["id", "firstName", "lastName"],
+        attributes: ["id", "firstName", "lastName", "position", "signatureImage"],
+      },
+      {
+        model: User,
+        as: "headApprover",
+        attributes: ["id", "firstName", "lastName", "position", "signatureImage"],
+      },
+      {
+        model: User,
+        as: "deanApprover",
+        attributes: ["id", "firstName", "lastName", "position", "signatureImage"],
+      },
+      {
+        model: User,
+        as: "vpApprover",
+        attributes: ["id", "firstName", "lastName", "position", "signatureImage"],
+      },
+      {
+        model: User,
+        as: "confirmer",
+        attributes: ["id", "firstName", "lastName", "position", "signatureImage"],
       },
       { model: LeaveType, as: "leaveType" },
       { model: LeaveAttachment, as: "attachments" },
+      {
+        model: LeaveHistory,
+        as: "history",
+        include: [
+          {
+            model: User,
+            as: "actor",
+            attributes: ["id", "firstName", "lastName", "role"],
+          },
+        ],
+      },
     ],
   };
   if (transaction) {
@@ -150,6 +185,16 @@ const LeaveLifecycle = {
         ? validation.workingDays
         : validation.totalDays;
 
+      // Determine initial status based on applicant's role
+      let initialStatus = "pending";
+      if (actor.role === "head") {
+        initialStatus = "pending_dean";
+      } else if (actor.role === "dean") {
+        initialStatus = "pending_vp";
+      } else if (actor.role === "vp") {
+        initialStatus = "approved";
+      }
+
       // Create leave request record
       const leaveRequest = await LeaveRequest.create(
         {
@@ -162,6 +207,7 @@ const LeaveLifecycle = {
           reason,
           contactAddress,
           contactPhone,
+          status: initialStatus,
         },
         { transaction: t }
       );
@@ -173,7 +219,7 @@ const LeaveLifecycle = {
           action: "created",
           actionBy: actor.id,
           oldStatus: null,
-          newStatus: "pending",
+          newStatus: initialStatus,
         },
         { transaction: t }
       );
@@ -249,55 +295,156 @@ const LeaveLifecycle = {
   /**
    * Internal: Approve transition
    */
-  async _handleApprove(leaveRequest, actor, options) {
-    if (leaveRequest.status !== "pending") {
-      throw new LifecycleError("ใบลาไม่อยู่ในสถานะรอดำเนินการ", 400);
-    }
-
-    // Authorization & department isolation
-    if (actor.role !== "admin") {
-      if (leaveRequest.userId === actor.id) {
-        throw new LifecycleError(
-          "ไม่อนุญาตให้อนุมัติใบลาของตนเอง (กรุณาให้ผู้ดูแลระบบเป็นผู้อนุมัติ)",
-          403
-        );
-      }
-
-      const userDeptId =
-        leaveRequest.user?.departmentId ||
-        leaveRequest.user?.department?.id;
-      if (!actor.departmentId || actor.departmentId !== userDeptId) {
-        throw new LifecycleError(
-          "ไม่มีสิทธิ์อนุมัติใบลาของบุคลากรต่างแผนก/สาขาวิชา",
-          403
-        );
-      }
-    }
-
-    const oldStatus = leaveRequest.status;
+  /**
+   * Internal: Approve transition (Multi-level: Head -> Dean -> VP)
+   */
+  async _handleApprove(leaveRequest, actor, options = {}) {
+    const currentStatus = leaveRequest.status;
+    const oldStatus = currentStatus;
+    const comment = options.note || options.comment || "";
     const t = await sequelize.transaction();
 
     try {
-      await leaveRequest.update(
-        {
-          status: "approved",
-          approvedBy: actor.id,
-          approvedAt: new Date(),
-        },
-        { transaction: t }
-      );
+      if (currentStatus === "pending") {
+        // Level 1: หัวหน้างาน
+        if (actor.role !== "admin") {
+          if (leaveRequest.userId === actor.id) {
+            throw new LifecycleError(
+              "ไม่อนุญาตให้อนุมัติใบลาของตนเอง (กรุณาให้ผู้ดูแลระบบเป็นผู้อนุมัติ)",
+              403
+            );
+          }
 
-      await LeaveHistory.create(
-        {
-          leaveRequestId: leaveRequest.id,
-          action: "approved",
-          actionBy: actor.id,
-          oldStatus,
-          newStatus: "approved",
-          note: options.note || null,
-        },
-        { transaction: t }
-      );
+          const userDeptId =
+            leaveRequest.user?.departmentId ||
+            leaveRequest.user?.department?.id;
+          if (!actor.departmentId || actor.departmentId !== userDeptId) {
+            throw new LifecycleError(
+              "ไม่มีสิทธิ์อนุมัติใบลาของบุคลากรต่างแผนก/สาขาวิชา",
+              403
+            );
+          }
+        }
+
+        await leaveRequest.update(
+          {
+            status: "pending_dean",
+            headComment: comment,
+            headApprovedBy: actor.id,
+            headApprovedAt: new Date(),
+            approvedBy: actor.id,
+            approvedAt: new Date(),
+          },
+          { transaction: t }
+        );
+
+        await LeaveHistory.create(
+          {
+            leaveRequestId: leaveRequest.id,
+            action: "approved",
+            actionBy: actor.id,
+            oldStatus,
+            newStatus: "pending_dean",
+            note: comment || "หัวหน้างานให้ความเห็นชอบและส่งต่อคณบดี/ผอ.สำนัก",
+          },
+          { transaction: t }
+        );
+      } else if (currentStatus === "pending_dean") {
+        // Level 2: คณบดี / ผอ.สำนัก / ผอ.สถาบัน
+        if (actor.role !== "admin") {
+          if (leaveRequest.userId === actor.id) {
+            throw new LifecycleError("ไม่อนุญาตให้ดำเนินการกับใบลาของตนเอง", 403);
+          }
+          if (actor.role !== "dean") {
+            throw new LifecycleError(
+              "เฉพาะคณบดี/ผอ.สำนัก/ผอ.สถาบัน หรือแอดมินเท่านั้นที่มีสิทธิ์ในขั้นตอนนี้",
+              403
+            );
+          }
+        }
+
+        await leaveRequest.update(
+          {
+            status: "pending_vp",
+            deanComment: comment,
+            deanApprovedBy: actor.id,
+            deanApprovedAt: new Date(),
+          },
+          { transaction: t }
+        );
+
+        await LeaveHistory.create(
+          {
+            leaveRequestId: leaveRequest.id,
+            action: "approved",
+            actionBy: actor.id,
+            oldStatus,
+            newStatus: "pending_vp",
+            note: comment || "คณบดี/ผอ.สำนักให้ความเห็นชอบและส่งต่อรองอธิการบดีฯ",
+          },
+          { transaction: t }
+        );
+      } else if (currentStatus === "pending_vp") {
+        // Level 3: คำสั่งรองอธิการบดีฝ่ายบริหารงานบุคคลและเทคโนโลยีสารสนเทศ
+        if (actor.role !== "admin" && actor.role !== "vp") {
+          throw new LifecycleError(
+            "เฉพาะรองอธิการบดีฝ่ายบริหารงานบุคคลฯ หรือแอดมินเท่านั้นที่มีสิทธิ์มีคำสั่งในขั้นตอนนี้",
+            403
+          );
+        }
+
+        const decision = options.decision || "allow"; // 'allow' or 'disallow'
+        if (decision === "disallow") {
+          await leaveRequest.update(
+            {
+              status: "rejected",
+              vpDecision: "disallow",
+              vpComment: comment,
+              vpApprovedBy: actor.id,
+              vpApprovedAt: new Date(),
+              rejectionReason: comment || "รองอธิการบดีฯ มีคำสั่งไม่อนุญาต",
+            },
+            { transaction: t }
+          );
+
+          await LeaveHistory.create(
+            {
+              leaveRequestId: leaveRequest.id,
+              action: "rejected",
+              actionBy: actor.id,
+              oldStatus,
+              newStatus: "rejected",
+              note: comment || "รองอธิการบดีฯ มีคำสั่งไม่อนุญาต",
+            },
+            { transaction: t }
+          );
+        } else {
+          await leaveRequest.update(
+            {
+              status: "approved",
+              vpDecision: "allow",
+              vpComment: comment,
+              vpApprovedBy: actor.id,
+              vpApprovedAt: new Date(),
+            },
+            { transaction: t }
+          );
+
+          await LeaveHistory.create(
+            {
+              leaveRequestId: leaveRequest.id,
+              action: "approved",
+              actionBy: actor.id,
+              oldStatus,
+              newStatus: "approved",
+              note: comment || "รองอธิการบดีฯ มีคำสั่งอนุญาต",
+            },
+            { transaction: t }
+          );
+        }
+      } else {
+        throw new LifecycleError("ใบลาไม่อยู่ในสถานะที่สามารถอนุมัติได้", 400);
+      }
 
       await t.commit();
     } catch (err) {
@@ -305,39 +452,49 @@ const LeaveLifecycle = {
       throw err;
     }
 
-    // Post-commit dispatching
-    this._dispatchPostApproveEvents(leaveRequest, actor, options.note);
-
-    return leaveRequest;
+    const updatedRequest = await findLeaveRequestWithDetails(leaveRequest.id);
+    this._dispatchPostApproveEvents(updatedRequest, actor, comment);
+    return updatedRequest;
   },
 
   /**
-   * Internal: Reject transition
+   * Internal: Reject transition (Multi-level reject)
    */
-  async _handleReject(leaveRequest, actor, options) {
+  async _handleReject(leaveRequest, actor, options = {}) {
     const { reason } = options;
     if (!reason) {
       throw new LifecycleError("กรุณาระบุเหตุผลการปฏิเสธ", 400);
     }
 
-    if (leaveRequest.status !== "pending") {
+    const pendingStatuses = ["pending", "pending_dean", "pending_vp"];
+    if (!pendingStatuses.includes(leaveRequest.status)) {
       throw new LifecycleError("ใบลาไม่อยู่ในสถานะรอดำเนินการ", 400);
     }
 
-    // Authorization & department isolation
+    // Authorization & isolation checks
     if (actor.role !== "admin") {
       if (leaveRequest.userId === actor.id) {
         throw new LifecycleError("ไม่อนุญาตให้ดำเนินการกับใบลาของตนเอง", 403);
       }
 
-      const userDeptId =
-        leaveRequest.user?.departmentId ||
-        leaveRequest.user?.department?.id;
-      if (!actor.departmentId || actor.departmentId !== userDeptId) {
-        throw new LifecycleError(
-          "ไม่มีสิทธิ์ปฏิเสธใบลาของบุคลากรต่างแผนก/สาขาวิชา",
-          403
-        );
+      if (leaveRequest.status === "pending") {
+        if (actor.role !== "head") {
+          throw new LifecycleError("ไม่มีสิทธิ์ปฏิเสธใบลาในขั้นตอนนี้", 403);
+        }
+        const userDeptId =
+          leaveRequest.user?.departmentId ||
+          leaveRequest.user?.department?.id;
+        if (!actor.departmentId || actor.departmentId !== userDeptId) {
+          throw new LifecycleError("ไม่มีสิทธิ์ปฏิเสธใบลาของบุคลากรต่างแผนก/สาขาวิชา", 403);
+        }
+      } else if (leaveRequest.status === "pending_dean") {
+        if (actor.role !== "dean") {
+          throw new LifecycleError("เฉพาะคณบดี/ผอ.สำนัก หรือแอดมินที่มีสิทธิ์ปฏิเสธในขั้นตอนนี้", 403);
+        }
+      } else if (leaveRequest.status === "pending_vp") {
+        if (actor.role !== "vp") {
+          throw new LifecycleError("เฉพาะรองอธิการบดีฯ หรือแอดมินที่มีสิทธิ์ไม่อนุญาตในขั้นตอนนี้", 403);
+        }
       }
     }
 
@@ -345,15 +502,29 @@ const LeaveLifecycle = {
     const t = await sequelize.transaction();
 
     try {
-      await leaveRequest.update(
-        {
-          status: "rejected",
-          approvedBy: actor.id,
-          approvedAt: new Date(),
-          rejectionReason: reason,
-        },
-        { transaction: t }
-      );
+      const updateData = {
+        status: "rejected",
+        rejectionReason: reason,
+      };
+
+      if (leaveRequest.status === "pending") {
+        updateData.headComment = reason;
+        updateData.headApprovedBy = actor.id;
+        updateData.headApprovedAt = new Date();
+        updateData.approvedBy = actor.id;
+        updateData.approvedAt = new Date();
+      } else if (leaveRequest.status === "pending_dean") {
+        updateData.deanComment = reason;
+        updateData.deanApprovedBy = actor.id;
+        updateData.deanApprovedAt = new Date();
+      } else if (leaveRequest.status === "pending_vp") {
+        updateData.vpDecision = "disallow";
+        updateData.vpComment = reason;
+        updateData.vpApprovedBy = actor.id;
+        updateData.vpApprovedAt = new Date();
+      }
+
+      await leaveRequest.update(updateData, { transaction: t });
 
       await LeaveHistory.create(
         {
@@ -373,10 +544,9 @@ const LeaveLifecycle = {
       throw err;
     }
 
-    // Post-commit dispatching
-    this._dispatchPostRejectEvents(leaveRequest, reason);
-
-    return leaveRequest;
+    const updatedRequest = await findLeaveRequestWithDetails(leaveRequest.id);
+    this._dispatchPostRejectEvents(updatedRequest, reason);
+    return updatedRequest;
   },
 
   /**
@@ -615,6 +785,9 @@ const LeaveLifecycle = {
   /**
    * Post-commit Event Dispatchers
    */
+  /**
+   * Post-commit Event Dispatchers
+   */
   async _dispatchPostCreateEvents(createdRequest, actor, totalDays) {
     try {
       const leaveTypeName = createdRequest.leaveType?.name || "ลา";
@@ -629,21 +802,19 @@ const LeaveLifecycle = {
         message: `${actor.firstName} ${actor.lastName} ยื่นใบ${leaveTypeName} ${totalDays} วัน`,
         relatedLeaveId: createdRequest.id,
       };
-      const adminNotifs = admins.map((admin) =>
-        Notification.create({
-          userId: admin.id,
-          ...newLeavePayload,
-        })
+      await Promise.all(
+        admins.map((admin) =>
+          Notification.create({ userId: admin.id, ...newLeavePayload })
+        )
       );
-      await Promise.all(adminNotifs);
       sseService.sendToUsers(
         admins.map((a) => a.id),
         "notification",
         newLeavePayload
       );
 
-      // 2. Notify Department Heads
-      if (actor.departmentId) {
+      // 2. Notify Approvers based on initial status
+      if (createdRequest.status === "pending" && actor.departmentId) {
         const heads = await User.findAll({
           where: {
             role: "head",
@@ -653,21 +824,39 @@ const LeaveLifecycle = {
         });
         const headPayload = {
           type: "new_leave",
-          title: "มีใบลาใหม่รออนุมัติ",
+          title: "มีใบลาใหม่รอความเห็นหัวหน้างาน",
           message: `${actor.firstName} ${actor.lastName} ยื่นใบ${leaveTypeName} ${totalDays} วัน`,
           relatedLeaveId: createdRequest.id,
         };
-        const headNotifs = heads.map((head) =>
-          Notification.create({
-            userId: head.id,
-            ...headPayload,
-          })
+        await Promise.all(
+          heads.map((head) =>
+            Notification.create({ userId: head.id, ...headPayload })
+          )
         );
-        await Promise.all(headNotifs);
         sseService.sendToUsers(
           heads.map((h) => h.id),
           "notification",
           headPayload
+        );
+      } else if (createdRequest.status === "pending_dean") {
+        const deans = await User.findAll({
+          where: { role: "dean", isActive: true },
+        });
+        const deanPayload = {
+          type: "new_leave",
+          title: "มีใบลาใหม่รอความเห็นคณบดี/ผอ.สำนัก",
+          message: `${actor.firstName} ${actor.lastName} ยื่นใบ${leaveTypeName} ${totalDays} วัน`,
+          relatedLeaveId: createdRequest.id,
+        };
+        await Promise.all(
+          deans.map((dean) =>
+            Notification.create({ userId: dean.id, ...deanPayload })
+          )
+        );
+        sseService.sendToUsers(
+          deans.map((d) => d.id),
+          "notification",
+          deanPayload
         );
       }
 
@@ -689,42 +878,70 @@ const LeaveLifecycle = {
   async _dispatchPostApproveEvents(leaveRequest, actor, note) {
     try {
       const leaveTypeName = leaveRequest.leaveType?.name || "ลา";
+      const empId = leaveRequest.userId;
 
-      // Notify employee
-      const empPayload = {
-        type: "approval",
-        title: "ใบลาได้รับการอนุมัติแล้ว",
-        message: `ใบ${leaveTypeName}ของคุณ (${leaveRequest.totalDays} วัน) ได้รับการอนุมัติโดยหัวหน้าสาขาแล้ว และกำลังรอแอดมินยืนยัน`,
-        relatedLeaveId: leaveRequest.id,
-      };
-      await Notification.create({
-        userId: leaveRequest.userId,
-        ...empPayload,
-      });
-      sseService.sendToUser(leaveRequest.userId, "notification", empPayload);
+      if (leaveRequest.status === "pending_dean") {
+        // Step 1 passed -> Notify employee and Deans
+        const empPayload = {
+          type: "approval",
+          title: "หัวหน้างานให้ความเห็นชอบใบลาแล้ว",
+          message: `ใบ${leaveTypeName}ของคุณ (${leaveRequest.totalDays} วัน) ได้รับความเห็นชอบจากหัวหน้างานแล้ว และส่งต่อคณบดี/ผอ.สำนัก`,
+          relatedLeaveId: leaveRequest.id,
+        };
+        await Notification.create({ userId: empId, ...empPayload });
+        sseService.sendToUser(empId, "notification", empPayload);
 
-      // Notify admins
-      const admins = await User.findAll({
-        where: { role: "admin", isActive: true },
-      });
-      const adminPayload = {
-        type: "new_leave",
-        title: "ใบลาผ่านการอนุมัติแล้ว",
-        message: `ใบ${leaveTypeName}ของ ${leaveRequest.user?.firstName || ""} ${leaveRequest.user?.lastName || ""} ผ่านการอนุมัติจากหัวหน้าสาขาแล้ว รอการยืนยัน`,
-        relatedLeaveId: leaveRequest.id,
-      };
-      const adminNotifs = admins.map((admin) =>
-        Notification.create({
-          userId: admin.id,
-          ...adminPayload,
-        })
-      );
-      await Promise.all(adminNotifs);
-      sseService.sendToUsers(
-        admins.map((a) => a.id),
-        "notification",
-        adminPayload
-      );
+        const deans = await User.findAll({ where: { role: "dean", isActive: true } });
+        const deanPayload = {
+          type: "new_leave",
+          title: "มีใบลาใหม่รอความเห็นคณบดี/ผอ.สำนัก",
+          message: `ใบ${leaveTypeName}ของ ${leaveRequest.user?.firstName || ""} รอความเห็นชอบจากคณบดี`,
+          relatedLeaveId: leaveRequest.id,
+        };
+        await Promise.all(deans.map((d) => Notification.create({ userId: d.id, ...deanPayload })));
+        sseService.sendToUsers(deans.map((d) => d.id), "notification", deanPayload);
+      } else if (leaveRequest.status === "pending_vp") {
+        // Step 2 passed -> Notify employee and VP
+        const empPayload = {
+          type: "approval",
+          title: "คณบดี/ผอ.สำนัก ให้ความเห็นชอบใบลาแล้ว",
+          message: `ใบ${leaveTypeName}ของคุณ (${leaveRequest.totalDays} วัน) ได้รับความเห็นชอบจากคณบดีแล้ว และส่งต่อรองอธิการบดีฯ`,
+          relatedLeaveId: leaveRequest.id,
+        };
+        await Notification.create({ userId: empId, ...empPayload });
+        sseService.sendToUser(empId, "notification", empPayload);
+
+        const vps = await User.findAll({ where: { role: "vp", isActive: true } });
+        const vpPayload = {
+          type: "new_leave",
+          title: "มีใบลาใหม่รอคำสั่งรองอธิการบดีฯ",
+          message: `ใบ${leaveTypeName}ของ ${leaveRequest.user?.firstName || ""} รอคำสั่งอนุญาตจากรองอธิการบดีฯ`,
+          relatedLeaveId: leaveRequest.id,
+        };
+        await Promise.all(vps.map((v) => Notification.create({ userId: v.id, ...vpPayload })));
+        sseService.sendToUsers(vps.map((v) => v.id), "notification", vpPayload);
+      } else if (leaveRequest.status === "approved") {
+        // Step 3 passed -> VP ordered "allow"
+        const empPayload = {
+          type: "approval",
+          title: "รองอธิการบดีฯ มีคำสั่งอนุญาตการลาแล้ว",
+          message: `ใบ${leaveTypeName}ของคุณ (${leaveRequest.totalDays} วัน) ได้รับการอนุญาตเรียบร้อยแล้ว กำลังรอฝ่ายบุคคลลงทะเบียนวันลา`,
+          relatedLeaveId: leaveRequest.id,
+        };
+        await Notification.create({ userId: empId, ...empPayload });
+        sseService.sendToUser(empId, "notification", empPayload);
+
+        // Notify Admins to confirm
+        const admins = await User.findAll({ where: { role: "admin", isActive: true } });
+        const adminPayload = {
+          type: "new_leave",
+          title: "ใบลาได้รับการอนุญาตแล้ว รอลงทะเบียน",
+          message: `ใบ${leaveTypeName}ของ ${leaveRequest.user?.firstName || ""} ${leaveRequest.user?.lastName || ""} ผ่านคำสั่งอนุญาตแล้ว รอการยืนยันลงทะเบียนวันลา`,
+          relatedLeaveId: leaveRequest.id,
+        };
+        await Promise.all(admins.map((admin) => Notification.create({ userId: admin.id, ...adminPayload })));
+        sseService.sendToUsers(admins.map((a) => a.id), "notification", adminPayload);
+      }
 
       // Trigger N8N Webhook
       if (n8nService && typeof n8nService.triggerLeaveStatusWebhook === "function") {
@@ -733,7 +950,7 @@ const LeaveLifecycle = {
             leaveRequest,
             leaveRequest.user,
             leaveRequest.leaveType,
-            "approved",
+            leaveRequest.status,
             note
           )
         ).catch((err) => console.error("Error triggering N8N webhook:", err));
@@ -748,8 +965,8 @@ const LeaveLifecycle = {
       const leaveTypeName = leaveRequest.leaveType?.name || "ลา";
       const rejectPayload = {
         type: "rejection",
-        title: "ใบลาถูกปฏิเสธ",
-        message: `ใบ${leaveTypeName}ของคุณ (${leaveRequest.totalDays} วัน) ถูกปฏิเสธโดยหัวหน้าสาขาเนื่องจาก: ${reason}`,
+        title: "ใบลาไม่ได้รับการอนุมัติ",
+        message: `ใบ${leaveTypeName}ของคุณ (${leaveRequest.totalDays} วัน) ไม่ได้รับการอนุมัติ เนื่องจาก: ${reason}`,
         relatedLeaveId: leaveRequest.id,
       };
 

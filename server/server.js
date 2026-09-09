@@ -143,6 +143,23 @@ app.get("/api/health", async (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
+  if (
+    err.name === "SequelizeValidationError" ||
+    err.name === "SequelizeUniqueConstraintError"
+  ) {
+    const isEmail = err.errors?.some(
+      (e) => e.path === "email" || e.validatorKey === "isEmail"
+    );
+    if (isEmail) {
+      return res.status(400).json({
+        message: "รูปแบบอีเมลไม่ถูกต้อง กรุณาตรวจสอบอีเมลอีกครั้ง (เช่น user@bru.ac.th)",
+      });
+    }
+    const messages =
+      err.errors?.map((e) => e.message).join(", ") || "ข้อมูลไม่ถูกต้องตามรูปแบบ";
+    return res.status(400).json({ message: messages });
+  }
+
   console.error(err.stack);
   // Hide error details in production
   if (process.env.NODE_ENV === "production") {

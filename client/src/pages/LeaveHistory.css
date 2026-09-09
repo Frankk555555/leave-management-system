@@ -149,6 +149,18 @@
   color: #b45309;
 }
 
+.status-badge.pending_dean,
+.status-badge.pending-dean {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.status-badge.pending_vp,
+.status-badge.pending-vp {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
 .status-badge.approved {
   background: #dbeafe;
   color: #1e40af;
@@ -566,6 +578,201 @@
     padding: 0.25rem 0.5rem;
     font-size: 0.8rem;
   }
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+}
+
+.preview-btn-form:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.pdf-btn-leave:hover {
+  background: #fff5f5;
+  border-color: #c53030;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(229, 62, 62, 0.1);
+}
+
+.footer-actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Attachment Links */
+.attachments-section {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #f0f9ff;
+  border-radius: 10px;
+  border: 1px solid #bae6fd;
+}
+
+.attachments-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #0369a1;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.attachments-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.attachment-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.attachment-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* ==========================================
+   RESPONSIVE STYLES
+   ========================================== */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .leave-history-page {
+    padding: 1.5rem;
+  }
+
+  .history-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .leave-history-page {
+    padding: 1rem;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .filter-tabs {
+    justify-content: center;
+  }
+
+  .filter-tabs button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .history-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .history-card {
+    border-radius: 14px;
+  }
+
+  .card-header {
+    padding: 0.875rem 1rem;
+  }
+
+  .type-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .date-range-display {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .action-row {
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .edit-btn,
+  .cancel-btn-leave,
+  .pdf-btn-leave {
+    padding: 0.65rem 1rem;
+    min-width: 90px;
+    font-size: 0.8rem;
+  }
+
+  .footer-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .leave-history-page {
+    padding: 0.75rem;
+  }
+
+  .filter-tabs {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .filter-tabs button {
+    flex: 1;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .type-name {
+    font-size: 0.9rem;
+  }
+
+  .status-badge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .days-badge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
 
   .reason-text {
     font-size: 0.85rem;
@@ -582,7 +789,6 @@
   .attachment-link {
     padding: 0.35rem 0.6rem;
     font-size: 0.7rem;
-  }
   }
 }
 

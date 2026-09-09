@@ -181,8 +181,8 @@ describe("LeaveLifecycle Deep Module", () => {
 
       expect(mockRequest.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          status: "approved",
-          approvedBy: 99,
+          status: "pending_dean",
+          headApprovedBy: 99,
         }),
         expect.any(Object)
       );
@@ -191,7 +191,56 @@ describe("LeaveLifecycle Deep Module", () => {
           leaveRequestId: 50,
           action: "approved",
           actionBy: 99,
-          note: "อนุมัติครับ",
+          newStatus: "pending_dean",
+        }),
+        expect.any(Object)
+      );
+    });
+
+    it("should allow dean to approve pending_dean request to pending_vp", async () => {
+      const mockRequest = {
+        id: 50,
+        userId: 20,
+        status: "pending_dean",
+        totalDays: 2,
+        user: { id: 20, department: { id: 5, facultyId: 2 } },
+        leaveType: { name: "ลาพักผ่อน" },
+        update: jest.fn().mockResolvedValue(true),
+      };
+      LeaveRequest.findByPk.mockResolvedValue(mockRequest);
+
+      const dean = { id: 77, role: "dean", department: { id: 10, facultyId: 2 } };
+      await LeaveLifecycle.transition(50, "approve", dean, { note: "เห็นชอบ" });
+
+      expect(mockRequest.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "pending_vp",
+          deanApprovedBy: 77,
+        }),
+        expect.any(Object)
+      );
+    });
+
+    it("should allow vp to issue command on pending_vp request to approved", async () => {
+      const mockRequest = {
+        id: 50,
+        userId: 20,
+        status: "pending_vp",
+        totalDays: 2,
+        user: { id: 20, department: { id: 5, facultyId: 2 } },
+        leaveType: { name: "ลาพักผ่อน" },
+        update: jest.fn().mockResolvedValue(true),
+      };
+      LeaveRequest.findByPk.mockResolvedValue(mockRequest);
+
+      const vp = { id: 66, role: "vp" };
+      await LeaveLifecycle.transition(50, "approve", vp, { note: "อนุญาต", decision: "allow" });
+
+      expect(mockRequest.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "approved",
+          vpDecision: "allow",
+          vpApprovedBy: 66,
         }),
         expect.any(Object)
       );

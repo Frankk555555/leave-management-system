@@ -421,18 +421,116 @@ const fillSickPersonalMaternityForm = async (
   // ผู้ขอลา (ลายเซ็นและชื่อ)
   // จุดกึ่งกลางของช่องว่างคือ x ≈ 440 (สำหรับ Sick/Personal)
   const centerX = 435; // The user desired X position 
-  if (signatureInfo && signatureInfo.ref) {
-    page.drawImage(signatureInfo.ref, {
-      x: centerX - (signatureInfo.dims.width / 2),
+  const applicantSig = signatureInfo?.applicant || (signatureInfo?.ref ? signatureInfo : null);
+  if (applicantSig && applicantSig.ref) {
+    page.drawImage(applicantSig.ref, {
+      x: centerX - (applicantSig.dims.width / 2),
       y: height - 433, // Place signature right above the text
-      width: signatureInfo.dims.width,
-      height: signatureInfo.dims.height,
+      width: applicantSig.dims.width,
+      height: applicantSig.dims.height,
     });
   }
   
   // คำนวณความกว้างของชื่อเพื่อให้อยู่ตรงกลาง (..............)
   const nameWidth = font.widthOfTextAtSize(fullName, fontSize);
   drawText(page, fullName, centerX - (nameWidth / 2), height - 430 - 20, font, fontSize);
+
+  // === ส่วนการอนุมัติ ๓ ระดับ (ตามลำดับชั้นผู้บังคับบัญชา) ===
+
+  // ๑. ความเห็นของหัวหน้าสำนักงาน/หัวหน้าภาค/หัวหน้าสาขาวิชา/หัวหน้างาน
+  if (signatureInfo?.head?.user || leaveData.headComment || leaveData.headApprovedAt) {
+    const headComment = signatureInfo?.head?.comment || "เห็นควรอนุญาต";
+    const headCommentWidth = font.widthOfTextAtSize(headComment, fontSize);
+    drawText(page, headComment, centerX - headCommentWidth / 2, height - 523, font, fontSize);
+
+    if (signatureInfo?.head?.sig?.ref) {
+      page.drawImage(signatureInfo.head.sig.ref, {
+        x: centerX - signatureInfo.head.sig.dims.width / 2,
+        y: height - 550,
+        width: signatureInfo.head.sig.dims.width,
+        height: signatureInfo.head.sig.dims.height,
+      });
+    }
+
+    if (signatureInfo?.head?.user) {
+      const headUser = signatureInfo.head.user;
+      const headName = `${headUser.title || ""}${headUser.firstName || ""} ${headUser.lastName || ""}`.trim();
+      const headNameWidth = font.widthOfTextAtSize(headName, fontSize);
+      drawText(page, headName, centerX - headNameWidth / 2, height - 571, font, fontSize);
+    }
+  }
+
+  // ๒. ความเห็นของคณบดี/ผอ.สำนัก/ผอ.สถาบัน
+  if (signatureInfo?.dean?.user || leaveData.deanComment || leaveData.deanApprovedAt) {
+    const deanComment = signatureInfo?.dean?.comment || "เห็นควรอนุญาต";
+    const deanCommentWidth = font.widthOfTextAtSize(deanComment, fontSize);
+    drawText(page, deanComment, centerX - deanCommentWidth / 2, height - 614, font, fontSize);
+
+    if (signatureInfo?.dean?.sig?.ref) {
+      page.drawImage(signatureInfo.dean.sig.ref, {
+        x: centerX - signatureInfo.dean.sig.dims.width / 2,
+        y: height - 642,
+        width: signatureInfo.dean.sig.dims.width,
+        height: signatureInfo.dean.sig.dims.height,
+      });
+    }
+
+    if (signatureInfo?.dean?.user) {
+      const deanUser = signatureInfo.dean.user;
+      const deanName = `${deanUser.title || ""}${deanUser.firstName || ""} ${deanUser.lastName || ""}`.trim();
+      const deanNameWidth = font.widthOfTextAtSize(deanName, fontSize);
+      drawText(page, deanName, centerX - deanNameWidth / 2, height - 662, font, fontSize);
+    }
+  }
+
+  // ๓. คำสั่งรองอธิการบดีฝ่ายบริหารงานบุคคลและเทคโนโลยีสารสนเทศ
+  if (signatureInfo?.vp?.user || signatureInfo?.vp?.decision || leaveData.vpApprovedAt || leaveData.status === "approved" || leaveData.status === "confirmed") {
+    const isAllowed =
+      signatureInfo?.vp?.decision === "allow" ||
+      ((leaveData.status === "approved" || leaveData.status === "confirmed") && signatureInfo?.vp?.decision !== "disallow");
+    const isDisallowed = signatureInfo?.vp?.decision === "disallow" || leaveData.status === "rejected";
+
+    if (isAllowed) {
+      drawCheckmark(347, height - 720);
+    } else if (isDisallowed) {
+      drawCheckmark(459.5, height - 720);
+    }
+
+    if (signatureInfo?.vp?.comment) {
+      drawText(page, signatureInfo.vp.comment, 340, height - 738, font, 12);
+    }
+
+    if (signatureInfo?.vp?.sig?.ref) {
+      page.drawImage(signatureInfo.vp.sig.ref, {
+        x: centerX - signatureInfo.vp.sig.dims.width / 2,
+        y: height - 751,
+        width: signatureInfo.vp.sig.dims.width,
+        height: signatureInfo.vp.sig.dims.height,
+      });
+    }
+
+    if (signatureInfo?.vp?.user) {
+      const vpUser = signatureInfo.vp.user;
+      const vpName = `${vpUser.title || ""}${vpUser.firstName || ""} ${vpUser.lastName || ""}`.trim();
+      const vpNameWidth = font.widthOfTextAtSize(vpName, fontSize);
+      drawText(page, vpName, centerX - vpNameWidth / 2, height - 771, font, fontSize);
+    }
+
+    const vpDateSource = signatureInfo?.vp?.approvedAt || (leaveData.status === "approved" || leaveData.status === "confirmed" ? leaveData.updatedAt : null);
+    if (vpDateSource) {
+      const vpDate = formatThaiDate(vpDateSource);
+      const dayStr = String(vpDate.day);
+      const monthStr = vpDate.month;
+      const yearStr = String(vpDate.year);
+      const dayWidth = font.widthOfTextAtSize(dayStr, fontSize);
+      const monthWidth = font.widthOfTextAtSize(monthStr, fontSize);
+      const yearWidth = font.widthOfTextAtSize(yearStr, fontSize);
+
+      drawText(page, dayStr, 385 - dayWidth / 2, height - 786, font, fontSize);
+      drawText(page, monthStr, 450 - monthWidth / 2, height - 786, font, fontSize);
+      drawText(page, yearStr, 508 - yearWidth / 2, height - 786, font, fontSize);
+    }
+  }
 };
 
 /**
@@ -586,13 +684,14 @@ const fillVacationForm = async (page, font, leaveData, userData, signatureInfo) 
   const signatureCenterX = 450;
   const signatureLineY = height - 348.5; // เส้น (ลงชื่อ) ........
 
-  if (signatureInfo && signatureInfo.ref) {
+  const applicantSig = signatureInfo?.applicant || (signatureInfo?.ref ? signatureInfo : null);
+  if (applicantSig && applicantSig.ref) {
     // วางลายเซ็นเหนือเส้น — ลายเซ็นสูง dims.height, ล่างสุดของลายเซ็นชิดเส้น
-    page.drawImage(signatureInfo.ref, {
-      x: signatureCenterX - signatureInfo.dims.width / 2,
+    page.drawImage(applicantSig.ref, {
+      x: signatureCenterX - applicantSig.dims.width / 2,
       y: signatureLineY + 4, // เริ่มจากเส้นขึ้นไป
-      width: signatureInfo.dims.width,
-      height: signatureInfo.dims.height,
+      width: applicantSig.dims.width,
+      height: applicantSig.dims.height,
     });
   }
 
@@ -711,12 +810,13 @@ const fillPaternityForm = async (page, font, leaveData, userData, signatureInfo)
 
   // ผู้ขอลา (ลายเซ็นและชื่อ)
   const centerX = 380;
-  if (signatureInfo && signatureInfo.ref) {
-    page.drawImage(signatureInfo.ref, {
-      x: centerX - (signatureInfo.dims.width / 2),
+  const applicantSig = signatureInfo?.applicant || (signatureInfo?.ref ? signatureInfo : null);
+  if (applicantSig && applicantSig.ref) {
+    page.drawImage(applicantSig.ref, {
+      x: centerX - (applicantSig.dims.width / 2),
       y: height - 580, // Adjust to be where signature goes in paternity form
-      width: signatureInfo.dims.width,
-      height: signatureInfo.dims.height,
+      width: applicantSig.dims.width,
+      height: applicantSig.dims.height,
     });
   }
   
@@ -799,6 +899,83 @@ const processSignatureBytes = async (imgBytes) => {
 };
 
 /**
+ * Helper โหลดและแปลงรูปภาพลายเซ็นต์เพื่อ embed ใน PDF
+ */
+const loadSignatureImage = async (pdfDoc, signaturePath, maxWidth = 130, maxHeight = 45) => {
+  if (!signaturePath) return null;
+  try {
+    const imgUrl = signaturePath.startsWith("http")
+      ? signaturePath
+      : `${config.API_URL}${signaturePath.startsWith("/") ? "" : "/"}${signaturePath}`;
+    const imgResponse = await fetch(imgUrl);
+    if (!imgResponse.ok) {
+      console.warn("Signature fetch failed with status:", imgResponse.status, imgUrl);
+      return null;
+    }
+    const imgBytes = await imgResponse.arrayBuffer();
+    let processedBytes = imgBytes;
+    try {
+      processedBytes = await processSignatureBytes(imgBytes);
+    } catch (processError) {
+      console.warn("Could not process signature background removal", processError);
+    }
+
+    let signatureImageRef = null;
+    try {
+      signatureImageRef = await pdfDoc.embedPng(processedBytes);
+    } catch (pngError) {
+      try {
+        signatureImageRef = await pdfDoc.embedJpg(processedBytes);
+      } catch (jpgError) {
+        console.warn("Could not embed signature as PNG or JPG", jpgError);
+        return null;
+      }
+    }
+
+    if (signatureImageRef) {
+      const dims = signatureImageRef.scaleToFit(maxWidth, maxHeight);
+      return { ref: signatureImageRef, dims };
+    }
+  } catch (err) {
+    console.warn("Could not load signature image:", signaturePath, err);
+  }
+  return null;
+};
+
+/**
+ * รวบรวมข้อมูลผู้อนุมัติและลายเซ็นต์
+ */
+const buildApproversInfo = async (pdfDoc, leaveData, userData) => {
+  const applicantSig = await loadSignatureImage(pdfDoc, userData?.signatureImage, 130, 45);
+  const headSig = await loadSignatureImage(pdfDoc, leaveData?.headApprover?.signatureImage, 110, 32);
+  const deanSig = await loadSignatureImage(pdfDoc, leaveData?.deanApprover?.signatureImage, 110, 32);
+  const vpSig = await loadSignatureImage(pdfDoc, leaveData?.vpApprover?.signatureImage, 110, 32);
+
+  return {
+    applicant: applicantSig,
+    head: {
+      sig: headSig,
+      user: leaveData?.headApprover,
+      comment: leaveData?.headComment,
+      approvedAt: leaveData?.headApprovedAt,
+    },
+    dean: {
+      sig: deanSig,
+      user: leaveData?.deanApprover,
+      comment: leaveData?.deanComment,
+      approvedAt: leaveData?.deanApprovedAt,
+    },
+    vp: {
+      sig: vpSig,
+      user: leaveData?.vpApprover,
+      decision: leaveData?.vpDecision,
+      comment: leaveData?.vpComment,
+      approvedAt: leaveData?.vpApprovedAt,
+    },
+  };
+};
+
+/**
  * สร้าง PDF ใบลาจาก Template
  */
 export const generateLeavePDF = async (leaveData, userData) => {
@@ -824,50 +1001,8 @@ export const generateLeavePDF = async (leaveData, userData) => {
     // โหลด font
     const font = await loadThaiFont(pdfDoc);
 
-    // โหลดลายเซ็นต์ดิจิทัลถ้ามี
-    let signatureImageRef = null;
-    let signatureImageDims = null;
-    if (userData.signatureImage) {
-      try {
-        const imgUrl = userData.signatureImage.startsWith("http")
-          ? userData.signatureImage
-          : `${config.API_URL}${userData.signatureImage}`;
-        const imgResponse = await fetch(imgUrl);
-        if (imgResponse.ok) {
-          const imgBytes = await imgResponse.arrayBuffer();
-          
-          // Process the signature bytes to remove checkerboard/light backgrounds
-          let processedBytes = imgBytes;
-          try {
-            processedBytes = await processSignatureBytes(imgBytes);
-          } catch (processError) {
-            console.warn("Could not process signature background removal, using original bytes", processError);
-          }
-
-          // Try loading as PNG first, fallback to JPG if embedding fails
-          try {
-            signatureImageRef = await pdfDoc.embedPng(processedBytes);
-          } catch (pngError) {
-            try {
-              signatureImageRef = await pdfDoc.embedJpg(processedBytes);
-            } catch (jpgError) {
-              console.warn("Could not embed signature as PNG or JPG", jpgError);
-              alert("คำเตือน: รูปภาพลายเซ็นต์ไม่ถูกต้อง โปรดอัปโหลดใหม่เป็นไฟล์ .png หรือ .jpg");
-            }
-          }
-          
-          if (signatureImageRef) {
-            signatureImageDims = signatureImageRef.scaleToFit(140, 50);
-          }
-        } else {
-          console.warn("Signature fetch failed with status: ", imgResponse.status);
-          alert("คำเตือน: ไม่สามารถดึงรูปลงนามจากเซิร์ฟเวอร์ได้ (" + imgResponse.status + ")");
-        }
-      } catch (e) {
-        console.warn("Could not load signature image", e);
-      }
-    }
-    const signatureInfo = { ref: signatureImageRef, dims: signatureImageDims };
+    // โหลดลายเซ็นต์ดิจิทัลของผู้ขอลาและผู้อนุมัติทุกระดับ
+    const signatureInfo = await buildApproversInfo(pdfDoc, leaveData, userData);
 
     // รับหน้าแรก
     const pages = pdfDoc.getPages();
@@ -920,7 +1055,7 @@ export const generateLeavePDF = async (leaveData, userData) => {
 };
 
 /**
- * Preview Leave PDF - เปิด PDF ในแท็บใหม่ (สำหรับ Admin)
+ * Preview Leave PDF - เปิด PDF ในแท็บใหม่ (สำหรับ Admin / ผู้บังคับบัญชา)
  */
 export const previewLeavePDF = async (leaveData, userData) => {
   try {
@@ -946,48 +1081,8 @@ export const previewLeavePDF = async (leaveData, userData) => {
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
     const font = await loadThaiFont(pdfDoc);
 
-    // โหลดลายเซ็นต์ดิจิทัลถ้ามี
-    let signatureImageRef = null;
-    let signatureImageDims = null;
-    if (userData.signatureImage) {
-      try {
-        const imgUrl = userData.signatureImage.startsWith("http")
-          ? userData.signatureImage
-          : `${config.API_URL}${userData.signatureImage}`;
-        const imgResponse = await fetch(imgUrl);
-        if (imgResponse.ok) {
-          const imgBytes = await imgResponse.arrayBuffer();
-          
-          // Process the signature bytes to remove checkerboard/light backgrounds
-          let processedBytes = imgBytes;
-          try {
-            processedBytes = await processSignatureBytes(imgBytes);
-          } catch (processError) {
-            console.warn("Could not process signature background removal, using original bytes", processError);
-          }
-
-          try {
-            signatureImageRef = await pdfDoc.embedPng(processedBytes);
-          } catch (pngError) {
-            try {
-              signatureImageRef = await pdfDoc.embedJpg(processedBytes);
-            } catch (jpgError) {
-              console.warn("Could not embed signature as PNG or JPG", jpgError);
-              alert("คำเตือน: รูปภาพลายเซ็นต์ไม่ถูกต้อง โปรดอัปโหลดใหม่เป็นไฟล์ .png หรือ .jpg");
-            }
-          }
-
-          if (signatureImageRef) {
-            signatureImageDims = signatureImageRef.scaleToFit(140, 50);
-          }
-        } else {
-          console.warn("Signature fetch failed with status:", imgResponse.status);
-        }
-      } catch (e) {
-        console.warn("Could not load signature image", e);
-      }
-    }
-    const signatureInfo = { ref: signatureImageRef, dims: signatureImageDims };
+    // โหลดลายเซ็นต์ดิจิทัลของผู้ขอลาและผู้อนุมัติทุกระดับ
+    const signatureInfo = await buildApproversInfo(pdfDoc, leaveData, userData);
 
     const pages = pdfDoc.getPages();
     const page = pages[0];

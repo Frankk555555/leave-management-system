@@ -96,8 +96,9 @@ export const useUpdateLeaveRequest = () => {
 export const useApproveLeaveRequest = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, note }) => {
-      const response = await leaveRequestsAPI.approve(id, note);
+    mutationFn: async ({ id, note, comment, decision }) => {
+      const payload = typeof note === "object" ? note : { note, comment, decision };
+      const response = await leaveRequestsAPI.approve(id, payload);
       return response.data;
     },
     onSuccess: () => {

@@ -131,6 +131,7 @@ const LeaveManagement = () => {
 
       // Prepare leave data
       const leaveData = {
+        ...request,
         leaveType: getLeaveTypeCode(request.leaveType),
         startDate: request.startDate,
         endDate: request.endDate,
@@ -144,6 +145,7 @@ const LeaveManagement = () => {
 
       // Prepare user data
       const userData = {
+        title: request.user?.title || "",
         firstName: request.user?.firstName || "",
         lastName: request.user?.lastName || "",
         position: request.user?.position || "",
@@ -177,7 +179,11 @@ const LeaveManagement = () => {
   const getStatusBadge = (status) => {
     switch (status) {
       case "pending":
-        return <span className="status-badge pending">รออนุมัติ</span>;
+        return <span className="status-badge pending">รอหัวหน้างาน</span>;
+      case "pending_dean":
+        return <span className="status-badge pending-dean">รอคณบดี/ผอ.สำนัก</span>;
+      case "pending_vp":
+        return <span className="status-badge pending-vp">รอรองอธิการบดี</span>;
       case "approved":
         return <span className="status-badge approved">รอลงข้อมูล</span>;
       case "confirmed":
@@ -353,7 +359,11 @@ const LeaveManagement = () => {
                               ? "✓ ดำเนินการแล้ว"
                               : request.status === "rejected"
                                 ? "✗ ปฏิเสธแล้ว"
-                                : "รออนุมัติ"}
+                                : request.status === "pending_dean"
+                                  ? "รอคณบดี/ผอ."
+                                  : request.status === "pending_vp"
+                                    ? "รอรองอธิการบดี"
+                                    : "รอหัวหน้างาน"}
                           </span>
                         )}
                       </div>
@@ -442,7 +452,11 @@ const LeaveManagement = () => {
                           ? "✓ ดำเนินการแล้ว"
                           : request.status === "rejected"
                             ? "✗ ปฏิเสธแล้ว"
-                            : "รออนุมัติ"}
+                            : request.status === "pending_dean"
+                              ? "รอคณบดี/ผอ."
+                              : request.status === "pending_vp"
+                                ? "รอรองอธิการบดี"
+                                : "รอหัวหน้างาน"}
                       </span>
                     )}
                   </div>

@@ -78,7 +78,7 @@ CREATE TABLE users (
   department_id         SMALLINT UNSIGNED,
   position              VARCHAR(80), 
   personnel_type        VARCHAR(50)  DEFAULT 'university_employee_academic' COMMENT 'ประเภทบุคลากรตามข้อ 1.4.2',
-  role                  ENUM('employee','head','admin') DEFAULT 'employee',
+  role                  ENUM('employee','head','dean','vp','admin') DEFAULT 'employee',
   supervisor_id         INT UNSIGNED COMMENT 'FK self-ref: หัวหน้าของพนักงานคนนี้',
   phone                 VARCHAR(15),
   profile_image         VARCHAR(500) COMMENT 'Path to profile image',
@@ -179,11 +179,27 @@ CREATE TABLE leave_requests (
   contact_address   VARCHAR(300)     COMMENT 'ที่อยู่ระหว่างลา',
   contact_phone     VARCHAR(15)      COMMENT 'เบอร์โทรระหว่างลา',
 
-  -- Approval workflow
-  status            ENUM('pending','approved','rejected','confirmed','cancelled')
+  -- Approval workflow (3 Levels)
+  status            ENUM('pending','pending_dean','pending_vp','approved','rejected','confirmed','cancelled')
                     DEFAULT 'pending',
-  approved_by       INT UNSIGNED     COMMENT 'FK: ผู้อนุมัติ (head)',
+  -- Level 1: หัวหน้างาน
+  head_comment      VARCHAR(500)     COMMENT 'ความเห็นของหัวหน้าสำนักงาน/หัวหน้าภาค/หัวหน้าสาขาวิชา/หัวหน้างาน',
+  head_approved_by  INT UNSIGNED     COMMENT 'FK: ผู้ให้ความเห็น (head)',
+  head_approved_at  TIMESTAMP NULL,
+  approved_by       INT UNSIGNED     COMMENT 'FK: ผู้อนุมัติ (head) - backward compatibility',
   approved_at       TIMESTAMP NULL,
+
+  -- Level 2: คณบดี / ผอ.สำนัก / ผอ.สถาบัน
+  dean_comment      VARCHAR(500)     COMMENT 'ความเห็นของคณบดี/ผอ.สำนัก/ผอ.สถาบัน',
+  dean_approved_by  INT UNSIGNED     COMMENT 'FK: ผู้ให้ความเห็น (dean)',
+  dean_approved_at  TIMESTAMP NULL,
+
+  -- Level 3: คำสั่งรองอธิการบดีฝ่ายบริหารงานบุคคลและเทคโนโลยีสารสนเทศ
+  vp_decision       ENUM('allow','disallow') COMMENT 'คำสั่งรองอธิการบดีฯ: allow=อนุญาต, disallow=ไม่อนุญาต',
+  vp_comment        VARCHAR(500)     COMMENT 'คำสั่งหรือความเห็นเพิ่มเติมของรองอธิการบดีฯ',
+  vp_approved_by    INT UNSIGNED     COMMENT 'FK: ผู้ลงนามคำสั่ง (vp)',
+  vp_approved_at    TIMESTAMP NULL,
+
   rejection_reason  VARCHAR(500),
 
   -- Confirmation (ขั้นตอนยืนยัน โดย admin)
@@ -198,10 +214,13 @@ CREATE TABLE leave_requests (
   created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-  FOREIGN KEY (user_id)       REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (leave_type_id) REFERENCES leave_types(id) ON DELETE RESTRICT,
-  FOREIGN KEY (approved_by)   REFERENCES users(id) ON DELETE SET NULL,
-  FOREIGN KEY (confirmed_by)  REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (user_id)          REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (leave_type_id)    REFERENCES leave_types(id) ON DELETE RESTRICT,
+  FOREIGN KEY (head_approved_by) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (approved_by)      REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (dean_approved_by) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (vp_approved_by)   REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (confirmed_by)     REFERENCES users(id) ON DELETE SET NULL,
 
   INDEX idx_user_id (user_id),
   INDEX idx_leave_type_id (leave_type_id),
@@ -297,8 +316,8 @@ CREATE TABLE leave_history (
   action            ENUM('created','approved','rejected','confirmed','cancelled',
                          'edited') NOT NULL,
   action_by         INT UNSIGNED COMMENT 'FK: ผู้กระทำ',
-  old_status        ENUM('pending','approved','rejected','confirmed','cancelled'),
-  new_status        ENUM('pending','approved','rejected','confirmed','cancelled'),
+  old_status        ENUM('pending','pending_dean','pending_vp','approved','rejected','confirmed','cancelled'),
+  new_status        ENUM('pending','pending_dean','pending_vp','approved','rejected','confirmed','cancelled'),
   note              VARCHAR(500) COMMENT 'หมายเหตุเพิ่มเติม',
   created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 

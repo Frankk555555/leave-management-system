@@ -37,11 +37,27 @@ const LeaveHistory = sequelize.define(
       comment: "FK: ผู้กระทำ",
     },
     oldStatus: {
-      type: DataTypes.ENUM("pending", "approved", "rejected", "confirmed", "cancelled"),
+      type: DataTypes.ENUM(
+        "pending",
+        "pending_dean",
+        "pending_vp",
+        "approved",
+        "rejected",
+        "confirmed",
+        "cancelled"
+      ),
       field: "old_status",
     },
     newStatus: {
-      type: DataTypes.ENUM("pending", "approved", "rejected", "confirmed", "cancelled"),
+      type: DataTypes.ENUM(
+        "pending",
+        "pending_dean",
+        "pending_vp",
+        "approved",
+        "rejected",
+        "confirmed",
+        "cancelled"
+      ),
       field: "new_status",
     },
     note: {

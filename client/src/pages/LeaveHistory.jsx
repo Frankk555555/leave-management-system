@@ -58,6 +58,7 @@ const LeaveHistory = () => {
     });
 
     const leaveData = {
+      ...request,
       leaveType: getLeaveTypeCode(request.leaveType),
       startDate: request.startDate,
       endDate: request.endDate,
@@ -104,6 +105,7 @@ const LeaveHistory = () => {
     });
 
     const leaveData = {
+      ...request,
       leaveType: getLeaveTypeCode(request.leaveType),
       startDate: request.startDate,
       endDate: request.endDate,
@@ -214,16 +216,20 @@ const LeaveHistory = () => {
                     <div className="days-badge">{request.totalDays} วัน</div>
                     <span className={`status-badge ${request.status}`}>
                       {request.status === "pending"
-                        ? "รออนุมัติ"
-                        : request.status === "approved"
-                          ? "รอลงข้อมูล"
-                          : request.status === "confirmed"
-                            ? "✓ ลงข้อมูลแล้ว"
-                            : request.status === "rejected"
-                              ? "ไม่อนุมัติ"
-                              : request.status === "cancelled"
-                                ? "ยกเลิก"
-                                : request.status}
+                        ? "รอหัวหน้างาน"
+                        : request.status === "pending_dean"
+                          ? "รอคณบดี/ผอ.สำนัก"
+                          : request.status === "pending_vp"
+                            ? "รอรองอธิการบดี"
+                            : request.status === "approved"
+                              ? "รอลงข้อมูล"
+                              : request.status === "confirmed"
+                                ? "✓ ลงข้อมูลแล้ว"
+                                : request.status === "rejected"
+                                  ? "ไม่อนุมัติ"
+                                  : request.status === "cancelled"
+                                    ? "ยกเลิก"
+                                    : request.status}
                     </span>
                   </div>
                 </div>

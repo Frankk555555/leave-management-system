@@ -147,8 +147,14 @@ const UserFormModal = ({
       toast.error("กรุณากรอกชื่อและนามสกุล");
       return;
     }
-    if (!formData.email) {
+    const trimmedEmail = formData.email ? formData.email.trim() : "";
+    if (!trimmedEmail) {
       toast.error("กรุณากรอกอีเมล");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      toast.error("รูปแบบอีเมลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง (เช่น user@bru.ac.th)");
       return;
     }
     if (!formData.position) {
@@ -161,14 +167,19 @@ const UserFormModal = ({
     }
 
     try {
+      const payload = {
+        ...formData,
+        email: trimmedEmail,
+      };
+
       if (editingUser) {
         await updateUserMutation.mutateAsync({
           id: editingUser.id || editingUser._id,
-          ...formData,
+          ...payload,
         });
         toast.success("อัปเดตข้อมูลบุคลากรเรียบร้อยแล้ว");
       } else {
-        await createUserMutation.mutateAsync(formData);
+        await createUserMutation.mutateAsync(payload);
         toast.success("เพิ่มบุคลากรใหม่เรียบร้อยแล้ว");
       }
 
@@ -176,7 +187,9 @@ const UserFormModal = ({
       if (onSuccess) onSuccess();
     } catch (error) {
       console.error(error);
-      toast.error(error.response?.data?.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+      const errorMsg =
+        error.response?.data?.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล";
+      toast.error(errorMsg);
     }
   };
 
@@ -214,12 +227,13 @@ const UserFormModal = ({
               />
             </div>
             <div className="form-group">
-              <label>อีเมล</label>
+              <label>อีเมล *</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
+                placeholder="เช่น user@bru.ac.th"
                 required
               />
             </div>
@@ -357,7 +371,9 @@ const UserFormModal = ({
                 onChange={handleChange}
               >
                 <option value="employee">บุคลากร</option>
-                <option value="head">หัวหน้างาน</option>
+                <option value="head">หัวหน้างาน / หัวหน้าสาขาวิชา</option>
+                <option value="dean">คณบดี / ผอ.สำนัก / ผอ.สถาบัน</option>
+                <option value="vp">รองอธิการบดีฝ่ายบริหารงานบุคคลฯ</option>
                 <option value="admin">ผู้ดูแลระบบ</option>
               </select>
             </div>

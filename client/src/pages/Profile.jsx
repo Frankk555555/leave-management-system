@@ -17,10 +17,28 @@ import {
   FaFileAlt,
   FaSitemap,
   FaUserTag,
+  FaUserShield,
 } from "react-icons/fa";
 import { getPersonnelTypeLabel } from "../constants/personnelTypes";
 import SEO, { SEOConfig } from "../components/common/SEO";
 import "./Profile.css";
+
+const getRoleLabel = (role) => {
+  switch (role) {
+    case "admin":
+      return "ผู้ดูแลระบบ (Admin)";
+    case "vp":
+      return "รองอธิการบดีฝ่ายบริหารงานบุคคลฯ";
+    case "dean":
+      return "คณบดี / ผอ.สำนัก / ผอ.สถาบัน";
+    case "head":
+    case "supervisor":
+      return "หัวหน้างาน / หัวหน้าสาขาวิชา";
+    case "employee":
+    default:
+      return "บุคลากร";
+  }
+};
 
 const Profile = () => {
   const { user, refreshUser } = useAuth();
@@ -375,10 +393,26 @@ const Profile = () => {
                 </div>
               </div>
               <div className="info-item">
+                <FaUserShield className="info-icon" />
+                <div>
+                  <label>บทบาทในระบบ</label>
+                  <span style={{ color: user?.role === "dean" || user?.role === "vp" || user?.role === "admin" ? "#4f46e5" : "inherit" }}>
+                    {getRoleLabel(user?.role)}
+                  </span>
+                </div>
+              </div>
+              <div className="info-item">
                 <FaUserTag className="info-icon" />
                 <div>
                   <label>ประเภทบุคลากร</label>
                   <span>{getPersonnelTypeLabel(user?.personnelType)}</span>
+                </div>
+              </div>
+              <div className="info-item">
+                <FaEnvelope className="info-icon" />
+                <div>
+                  <label>อีเมล</label>
+                  <span>{user?.email || "-"}</span>
                 </div>
               </div>
             </div>

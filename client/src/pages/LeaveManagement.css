@@ -251,6 +251,18 @@
   color: #b45309;
 }
 
+.status-badge.pending_dean,
+.status-badge.pending-dean {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.status-badge.pending_vp,
+.status-badge.pending-vp {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
 .status-badge.approved {
   background: #dbeafe;
   color: #1e40af;

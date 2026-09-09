@@ -244,6 +244,37 @@ const createUser = async (req, res) => {
       leaveBalances: userWithBalance.leaveBalances,
     });
   } catch (error) {
+    if (
+      error.name === "SequelizeValidationError" ||
+      error.name === "SequelizeUniqueConstraintError"
+    ) {
+      const isEmail = error.errors?.some(
+        (e) => e.path === "email" || e.validatorKey === "isEmail"
+      );
+      if (isEmail) {
+        return res.status(400).json({
+          message:
+            "รูปแบบอีเมลไม่ถูกต้อง กรุณาตรวจสอบอีเมลอีกครั้ง (เช่น user@bru.ac.th)",
+        });
+      }
+      const isEmployeeIdUnique = error.errors?.some(
+        (e) => e.path === "employee_id" || e.path === "employeeId"
+      );
+      if (isEmployeeIdUnique) {
+        return res.status(400).json({
+          message: "รหัสบุคลากรนี้มีอยู่ในระบบแล้ว",
+        });
+      }
+      const isEmailUnique = error.errors?.some((e) => e.path === "email");
+      if (isEmailUnique) {
+        return res.status(400).json({
+          message: "อีเมลนี้มีอยู่ในระบบแล้ว",
+        });
+      }
+      const messages =
+        error.errors?.map((e) => e.message).join(", ") || "ข้อมูลไม่ถูกต้อง";
+      return res.status(400).json({ message: messages });
+    }
     console.error(error);
     res.status(500).json({
       message: "Server error",
@@ -334,6 +365,37 @@ const updateUser = async (req, res) => {
 
     res.json(updatedUser);
   } catch (error) {
+    if (
+      error.name === "SequelizeValidationError" ||
+      error.name === "SequelizeUniqueConstraintError"
+    ) {
+      const isEmail = error.errors?.some(
+        (e) => e.path === "email" || e.validatorKey === "isEmail"
+      );
+      if (isEmail) {
+        return res.status(400).json({
+          message:
+            "รูปแบบอีเมลไม่ถูกต้อง กรุณาตรวจสอบอีเมลอีกครั้ง (เช่น user@bru.ac.th)",
+        });
+      }
+      const isEmployeeIdUnique = error.errors?.some(
+        (e) => e.path === "employee_id" || e.path === "employeeId"
+      );
+      if (isEmployeeIdUnique) {
+        return res.status(400).json({
+          message: "รหัสบุคลากรนี้มีอยู่ในระบบแล้ว",
+        });
+      }
+      const isEmailUnique = error.errors?.some((e) => e.path === "email");
+      if (isEmailUnique) {
+        return res.status(400).json({
+          message: "อีเมลนี้มีอยู่ในระบบแล้ว",
+        });
+      }
+      const messages =
+        error.errors?.map((e) => e.message).join(", ") || "ข้อมูลไม่ถูกต้อง";
+      return res.status(400).json({ message: messages });
+    }
     console.error(error);
     res.status(500).json({
       message: "Server error",

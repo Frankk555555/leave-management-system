@@ -77,8 +77,13 @@ export const AuthProvider = ({ children }) => {
     refreshUser,
     isAuthenticated: !!user,
     isAdmin: user?.role === "admin",
+    isHead: user?.role === "head",
+    isDean: user?.role === "dean",
+    isVP: user?.role === "vp",
     isSupervisor:
       user?.role === "head" ||
+      user?.role === "dean" ||
+      user?.role === "vp" ||
       user?.role === "admin",
   };
 

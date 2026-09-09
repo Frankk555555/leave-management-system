@@ -222,8 +222,8 @@ describe("leaveRequestController", () => {
 
       expect(mockUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          status: "approved",
-          approvedBy: 50,
+          status: "pending_dean",
+          headApprovedBy: 50,
         }),
         expect.anything()
       );
@@ -251,8 +251,8 @@ describe("leaveRequestController", () => {
 
       expect(mockUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          status: "approved",
-          approvedBy: 99,
+          status: "pending_dean",
+          headApprovedBy: 99,
         }),
         expect.anything()
       );

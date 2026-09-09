@@ -100,6 +100,32 @@ const testConnection = async () => {
       await sequelize.query(
         "ALTER TABLE users MODIFY profile_image VARCHAR(500), MODIFY signature_image VARCHAR(500);"
       );
+
+      // Multi-Level Approval Schema Updates
+      await sequelize.query(
+        "ALTER TABLE users MODIFY role ENUM('employee', 'head', 'dean', 'vp', 'admin') DEFAULT 'employee';"
+      ).catch(() => {});
+
+      await ensureColumnExists("leave_requests", "head_comment", "VARCHAR(500) NULL COMMENT 'ความเห็นหัวหน้างาน'");
+      await ensureColumnExists("leave_requests", "head_approved_by", "INT UNSIGNED NULL COMMENT 'FK: ผู้ให้ความเห็น (head)'");
+      await ensureColumnExists("leave_requests", "head_approved_at", "TIMESTAMP NULL");
+
+      await ensureColumnExists("leave_requests", "dean_comment", "VARCHAR(500) NULL COMMENT 'ความเห็นคณบดี'");
+      await ensureColumnExists("leave_requests", "dean_approved_by", "INT UNSIGNED NULL COMMENT 'FK: ผู้ให้ความเห็น (dean)'");
+      await ensureColumnExists("leave_requests", "dean_approved_at", "TIMESTAMP NULL");
+
+      await ensureColumnExists("leave_requests", "vp_decision", "ENUM('allow', 'disallow') NULL COMMENT 'คำสั่งรองอธิการบดีฯ'");
+      await ensureColumnExists("leave_requests", "vp_comment", "VARCHAR(500) NULL COMMENT 'คำสั่งหรือความเห็นเพิ่มเติมรองอธิการบดีฯ'");
+      await ensureColumnExists("leave_requests", "vp_approved_by", "INT UNSIGNED NULL COMMENT 'FK: ผู้ลงนามคำสั่ง (vp)'");
+      await ensureColumnExists("leave_requests", "vp_approved_at", "TIMESTAMP NULL");
+
+      await sequelize.query(
+        "ALTER TABLE leave_requests MODIFY status ENUM('pending', 'pending_dean', 'pending_vp', 'approved', 'rejected', 'confirmed', 'cancelled') DEFAULT 'pending';"
+      ).catch(() => {});
+
+      await sequelize.query(
+        "ALTER TABLE leave_history MODIFY old_status ENUM('pending', 'pending_dean', 'pending_vp', 'approved', 'rejected', 'confirmed', 'cancelled'), MODIFY new_status ENUM('pending', 'pending_dean', 'pending_vp', 'approved', 'rejected', 'confirmed', 'cancelled');"
+      ).catch(() => {});
     } catch (e) {
       // Table might not exist yet or dialect might differ; ignore safely
     }

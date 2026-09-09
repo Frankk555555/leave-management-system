@@ -98,8 +98,16 @@ export const leaveRequestsAPI = {
   update: (id, data) => api.put(`/leave-requests/${id}`, data),
   getTeam: () => api.get("/leave-requests/team"),
   getPending: () => api.get("/leave-requests/pending"),
-  approve: (id, note) => api.put(`/leave-requests/${id}/approve`, { note }),
-  reject: (id, reason) => api.put(`/leave-requests/${id}/reject`, { reason }),
+  approve: (id, payload) =>
+    api.put(
+      `/leave-requests/${id}/approve`,
+      typeof payload === "object" ? payload : { note: payload },
+    ),
+  reject: (id, reason) =>
+    api.put(
+      `/leave-requests/${id}/reject`,
+      typeof reason === "object" ? reason : { reason },
+    ),
 };
 
 // Leave Types API

@@ -459,7 +459,7 @@ const UserIngestion = {
         continue;
       }
 
-      const validRoles = ["employee", "head", "admin"];
+      const validRoles = ["employee", "head", "dean", "vp", "admin"];
       if (!validRoles.includes(rowData.role)) {
         rowData.role = "employee";
       }
@@ -646,7 +646,7 @@ const UserIngestion = {
           continue;
         }
 
-        const validRoles = ["employee", "head", "admin"];
+        const validRoles = ["employee", "head", "dean", "vp", "admin"];
         if (!validRoles.includes(rowData.role)) {
           rowData.role = "employee";
         }
@@ -1093,11 +1093,11 @@ const UserIngestion = {
     const departments = await Department.findAll({ attributes: ["id", "name"] });
     const faculties = await Faculty.findAll({ attributes: ["id", "name"] });
     const supervisors = await User.findAll({
-      where: { role: { [Op.in]: ["head", "admin"] } },
+      where: { role: { [Op.in]: ["head", "dean", "vp", "admin"] } },
       attributes: ["id", "firstName", "lastName", "employeeId"],
     });
 
-    const roles = ["employee", "head", "admin"];
+    const roles = ["employee", "head", "dean", "vp", "admin"];
     const personnelTypes = [
       "ข้าราชการในสถาบันอุดมศึกษา (สายผู้สอน)",
       "ข้าราชการในสถาบันอุดมศึกษา (สายสนับสนุน)",

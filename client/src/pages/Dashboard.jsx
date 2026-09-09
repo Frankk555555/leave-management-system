@@ -253,16 +253,20 @@ const Dashboard = () => {
                     </div>
                     <span className={`status-badge ${request.status || "pending"}`}>
                       {request.status === "pending"
-                        ? "รออนุมัติ"
-                        : request.status === "approved"
-                          ? "รอลงข้อมูล"
-                          : request.status === "confirmed"
-                            ? "ลงข้อมูลแล้ว"
-                            : request.status === "rejected"
-                              ? "ไม่อนุมัติ"
-                              : request.status === "cancelled"
-                                ? "ยกเลิก"
-                                : request.status}
+                        ? "รอหัวหน้างาน"
+                        : request.status === "pending_dean"
+                          ? "รอคณบดี/ผอ.สำนัก"
+                          : request.status === "pending_vp"
+                            ? "รอรองอธิการบดี"
+                            : request.status === "approved"
+                              ? "รอลงข้อมูล"
+                              : request.status === "confirmed"
+                                ? "ลงข้อมูลแล้ว"
+                                : request.status === "rejected"
+                                  ? "ไม่อนุมัติ"
+                                  : request.status === "cancelled"
+                                    ? "ยกเลิก"
+                                    : request.status}
                     </span>
                     <div className="request-days">{request.totalDays} วัน</div>
                   </Link>

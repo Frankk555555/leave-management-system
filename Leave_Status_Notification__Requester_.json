@@ -3,6 +3,32 @@
   "nodes": [
     {
       "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/smtp/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"sender\": {\n    \"name\": \"ระบบบริหารจัดการวันลา\",\n    \"email\": \"leavemanagementbru@gmail.com\"\n  },\n  \"to\": [\n    {\n      \"email\": \"{{ $json.body.user.email }}\"\n    }\n  ],\n  \"subject\": \"[แจ้งผลการลา] {{ $json.body.status === 'confirmed' ? 'อนุมัติเรียบร้อยแล้ว' : ($json.body.status === 'approved' ? 'ผ่านการรับรองจากหัวหน้างาน' : 'ไม่อนุมัติ') }} - {{ $json.body.leaveType.name }}\",\n  \"htmlContent\": \"<div style=\\\"font-family: sans-serif; max-width: 600px; margin: 0 auto;\\\"><div style=\\\"background: linear-gradient(135deg, #667eea, #764ba2); padding: 20px; border-radius: 10px 10px 0 0;\\\"><h2 style=\\\"color: white; margin: 0;\\\">🔔 แจ้งเตือนสถานะคำขอลา</h2></div><div style=\\\"background: white; padding: 20px; border: 1px solid #e2e8f0;\\\"><p>เรียนคุณ <strong>{{ $json.body.user.firstName }} {{ $json.body.user.lastName }}</strong></p><p>คำขอลาของคุณได้รับการอัปเดตสถานะเป็น: <strong style=\\\"color: {{ $json.body.status === 'confirmed' ? '#10b981' : ($json.body.status === 'approved' ? '#3b82f6' : '#ef4444') }};\\\">{{ $json.body.status === 'confirmed' ? 'อนุมัติและบันทึกข้อมูลลงระบบเรียบร้อยแล้ว' : ($json.body.status === 'approved' ? 'ผ่านการรับรองจากหัวหน้างานแล้ว (รอแอดมินยืนยัน)' : 'ไม่อนุมัติ') }}</strong></p><hr style=\\\"border: none; border-top: 1px solid #e2e8f0; margin: 15px 0;\\\"><p><strong>ประเภทการลา:</strong> {{ $json.body.leaveType.name }}</p><p><strong>จำนวนวัน:</strong> {{ $json.body.leaveRequest.totalDays }} วัน</p><p><strong>หมายเหตุ/เหตุผลประกอบ:</strong> {{ $json.body.note || '-' }}</p><div style=\\\"margin-top: 20px;\\\"><a href=\\\"{{ $json.body.frontendUrl }}/history\\\" style=\\\"background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;\\\">ตรวจสอบประวัติการลา</a></div></div></div>\"\n}\n",
+        "options": {}
+      },
+      "id": "1d30bccc-88ed-490a-8289-a47532141e52",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        -180
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "itrmEv8coiKefDEK",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
         "httpMethod": "POST",
         "path": "leave-status",
         "options": {}
@@ -16,32 +42,6 @@
         -176
       ],
       "webhookId": "leave-status-webhook-id"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.brevo.com/v3/smtp/email",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"sender\": {\n    \"name\": \"ระบบบริหารจัดการวันลา\",\n    \"email\": \"leavemanagementbru@gmail.com\"\n  },\n  \"to\": [\n    {\n      \"email\": \"{{ $json.body.user.email }}\"\n    }\n  ],\n  \"subject\": \"[แจ้งผลการลา] {{ $json.body.status === 'confirmed' ? 'อนุมัติเรียบร้อยแล้ว' : ($json.body.status === 'approved' ? 'ผ่านการรับรองจากหัวหน้างาน' : 'ไม่อนุมัติ') }} - {{ $json.body.leaveType.name }}\",\n  \"htmlContent\": \"<div style=\\\"font-family: sans-serif; max-width: 600px; margin: 0 auto;\\\"><div style=\\\"background: linear-gradient(135deg, #667eea, #764ba2); padding: 20px; border-radius: 10px 10px 0 0;\\\"><h2 style=\\\"color: white; margin: 0;\\\">🔔 แจ้งเตือนสถานะคำขอลา</h2></div><div style=\\\"background: white; padding: 20px; border: 1px solid #e2e8f0;\\\"><p>เรียนคุณ <strong>{{ $json.body.user.firstName }} {{ $json.body.user.lastName }}</strong></p><p>คำขอลาของคุณได้รับการอัปเดตสถานะเป็น: <strong style=\\\"color: {{ $json.body.status === 'confirmed' ? '#10b981' : ($json.body.status === 'approved' ? '#3b82f6' : '#ef4444') }};\\\">{{ $json.body.status === 'confirmed' ? 'อนุมัติและบันทึกข้อมูลลงระบบเรียบร้อยแล้ว' : ($json.body.status === 'approved' ? 'ผ่านการรับรองจากหัวหน้างานแล้ว (รอแอดมินยืนยัน)' : 'ไม่อนุมัติ') }}</strong></p><hr style=\\\"border: none; border-top: 1px solid #e2e8f0; margin: 15px 0;\\\"><p><strong>ประเภทการลา:</strong> {{ $json.body.leaveType.name }}</p><p><strong>จำนวนวัน:</strong> {{ $json.body.leaveRequest.totalDays }} วัน</p><p><strong>หมายเหตุ/เหตุผลประกอบ:</strong> {{ $json.body.note || '-' }}</p><div style=\\\"margin-top: 20px;\\\"><a href=\\\"{{ $json.body.frontendUrl }}/history\\\" style=\\\"background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;\\\">ตรวจสอบประวัติการลา</a></div></div></div>\"\n}\n",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
-      "position": [
-        80,
-        -176
-      ],
-      "id": "3950d329-b8bf-4efc-8502-ced0f00a07a7",
-      "name": "HTTP Request",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "itrmEv8coiKefDEK",
-          "name": "Header Auth account"
-        }
-      }
     }
   ],
   "pinData": {
@@ -125,12 +125,11 @@
     "callerPolicy": "workflowsFromSameOwner",
     "saveExecutionProgress": true
   },
-  "versionId": "1e0b11e8-1662-4571-914c-98392d18eed8",
+  "versionId": "61a1300e-0964-4eb9-bee3-d1807bb699f2",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "3f7fbd55c515a7e4ec9d5459785ef3e1a83a54108f3556656a50faa2875ca864"
+    "instanceId": "094a5d408ebf521c9b3b5c8c70ced99fe2db63490427fb070a8fc62655a9b8f1"
   },
-  "nodeGroups": [],
   "id": "zt3OkxZKE7ndI5vz",
   "tags": []
 }
